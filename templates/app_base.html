@@ -1,0 +1,125 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf-token" content="{{ csrf_token }}">
+<title>{% block title %}Кабинет{% endblock %} — BYTE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+<link rel="stylesheet" href="{% static 'css/theme.css' %}">
+<link rel="stylesheet" href="{% static 'css/ai.css' %}">
+</head>
+<body class="app-body">
+
+<header class="app-header">
+  <div class="app-header-inner">
+    <a class="brand" href="{% url 'index' %}">
+      <img src="{% static 'img/logo.png' %}" alt="BYTE">
+      BYTE
+    </a>
+    <nav class="app-tabs" aria-label="Разделы кабинета">
+      <a class="app-tab{% if active_tab == 'materials' %} is-active{% endif %}" href="{% url 'dashboard' %}">Материалы</a>
+      <a class="app-tab{% if active_tab == 'contest' %} is-active{% endif %}" href="{% url 'contest' %}">Лайв-контест</a>
+    </nav>
+    <div class="app-user">
+
+  <span class="app-user-name">
+    {{ user.get_username }}
+  </span>
+
+  <!-- Переключатель темы -->
+  <button
+    class="theme-button"
+    id="themeButton"
+    type="button"
+    aria-label="Сменить тему"
+  >
+    ☀
+  </button>
+
+  <form method="post" action="{% url 'logout' %}">
+    {% csrf_token %}
+    <button class="btn btn-ghost btn-sm" type="submit">
+      Выйти
+    </button>
+  </form>
+
+    </div>
+  </div>
+</header>
+
+{% block body %}{% endblock %}
+<!-- BYTE AI -->
+<div class="byte-ai">
+
+  <button class="byte-ai-button" id="byteAiButton" type="button">
+    <span class="byte-ai-icon">✦</span>
+    <span>BYTE AI</span>
+  </button>
+
+  <div class="byte-ai-window" id="byteAiWindow">
+
+    <div class="byte-ai-header">
+      <div>
+        <div class="byte-ai-title">
+          <span>✦</span> BYTE AI
+        </div>
+        <div class="byte-ai-subtitle">
+          Помощник по информатике
+        </div>
+      </div>
+
+      <button
+        class="byte-ai-close"
+        id="byteAiClose"
+        type="button"
+        aria-label="Закрыть"
+      >
+        ×
+      </button>
+    </div>
+
+    <div class="byte-ai-messages" id="byteAiMessages">
+
+      <div class="byte-ai-message byte-ai-message-bot">
+        Привет! 👋<br>
+        Я BYTE AI. Могу помочь с Python, C++, SQL,
+        HTML, CSS, алгоритмами и подготовкой к ЕНТ.
+      </div>
+
+    </div>
+
+    <div class="byte-ai-input-area">
+
+      <textarea
+        id="byteAiInput"
+        class="byte-ai-input"
+        placeholder="Задайте вопрос..."
+        rows="1"
+      ></textarea>
+
+      <button
+        id="byteAiSend"
+        class="byte-ai-send"
+        type="button"
+        aria-label="Отправить"
+      >
+        ↑
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+{% block scripts %}{% endblock %}
+<script src="{% static 'js/theme.js' %}"></script>
+<script src="{% static 'js/ai.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+/* ================================
+   BYTE THEME
+   ================================ */
+
+/* Плавный переход */
+html,
+body,
+.app-header,
+.dash-side,
+.topic-card,
+.child-link,
+.cx-statement,
+.cx-result,
+.auth-card,
+.byte-ai-window {
+    transition:
+        background-color 0.3s ease,
+        color 0.3s ease,
+        border-color 0.3s ease;
+}
+
+
+/* ================================
+   LIGHT THEME
+   ================================ */
+
+html.light-theme {
+    --bg: #f5f6f8;
+    --bg-elevated: #ffffff;
+    --bg-card: #ffffff;
+
+    --border: #dfe2e8;
+    --border-soft: #e9ebef;
+
+    --text: #17191d;
+    --text-muted: #666b76;
+    --text-faint: #9499a5;
+}
+
+
+/* ================================
+   HEADER
+   ================================ */
+
+html.light-theme .app-header {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+
+/* ================================
+   SIDEBAR
+   ================================ */
+
+html.light-theme .dash-side {
+    background: #f5f6f8;
+}
+
+
+/* ================================
+   CURRENT SECTION
+   ================================ */
+
+html.light-theme .tree-link.is-current {
+    color: #17191d;
+}
+
+
+/* ================================
+   THEME BUTTON
+   ================================ */
+
+.theme-button {
+    width: 38px;
+    height: 38px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid var(--border);
+    border-radius: 10px;
+
+    background: var(--bg-card);
+    color: var(--text);
+
+    font-size: 17px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.2s ease,
+        background 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease;
+}
+
+.theme-button:hover {
+    transform: translateY(-2px) rotate(10deg);
+    border-color: var(--blue);
+}
+
+.theme-button:active {
+    transform: scale(0.94);
+}
