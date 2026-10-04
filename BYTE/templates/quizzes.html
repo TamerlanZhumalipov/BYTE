@@ -1,0 +1,12 @@
+{% extends "app_base.html" %}
+{% block title %}Тесты{% endblock %}
+{% block body %}
+<main class="learning-page">
+  <div class="page-heading"><div><span class="kicker">практика / проверка знаний</span><h1>Проверь себя</h1><p>Закрепляй темы в своём темпе. После теста — результат и разбор каждого ответа.</p></div><a class="btn btn-ghost" href="{% url 'results' %}">Мои результаты ↗</a></div>
+  <div class="quiz-grid">
+    {% for quiz in quizzes %}
+    <article class="learn-card"><span class="eyebrow">{% if quiz.section %}{{ quiz.section.title }}{% else %}Информатика{% endif %}</span><h2>{{ quiz.title }}</h2><p>{{ quiz.description }}</p><div class="card-tags"><span>{{ quiz.question_count }} вопросов</span><span>Проходной балл {{ quiz.passing_percent }}%</span></div>{% if quiz.best != None %}<p class="best-score">Лучший результат: {{ quiz.best }}%</p>{% endif %}<a class="btn btn-primary" href="{% url 'quiz_detail' quiz.pk %}">{% if quiz.best != None %}Пройти ещё раз{% else %}Начать тест{% endif %} <span aria-hidden="true">→</span></a></article>
+    {% empty %}<div class="empty-state"><span class="empty-symbol">{ ? }</span><h2>Тесты скоро появятся</h2><p>Пока можно изучить материалы и разобрать сложные вопросы с BYTE AI.</p><a class="btn btn-primary" href="{% url 'dashboard' %}">К материалам</a></div>{% endfor %}
+  </div>
+</main>
+{% endblock %}

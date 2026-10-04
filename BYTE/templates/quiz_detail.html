@@ -1,0 +1,16 @@
+{% extends "app_base.html" %}
+{% block title %}{{ quiz.title }}{% endblock %}
+{% block body %}
+<main class="learning-page narrow">
+<a class="back-link" href="{% url 'quizzes' %}">← Все тесты</a>
+<div class="page-heading"><div><span class="kicker">{{ questions|length }} вопросов · один ответ на вопрос</span><h1>{{ quiz.title }}</h1><p>{{ quiz.description }}</p></div></div>
+<form method="post" id="quizForm">{% csrf_token %}<input type="hidden" name="submission_token" value="{{ submission_token }}">
+{% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+<div class="quiz-counter" aria-live="polite" id="quizCounter">Отвечено: 0 / {{ questions|length }}</div>
+{% for q in questions %}<fieldset class="question-card"><legend><span class="question-number">{{ forloop.counter|stringformat:"02d" }}</span> {{ q.text }}</legend><div class="answer-options">{% for letter, text in q.options %}<label class="answer-option"><input type="radio" name="question_{{ q.pk }}" value="{{ letter }}" required {% if q.selected == letter %}checked{% endif %}><span class="option-letter">{{ letter }}</span><span>{{ text }}</span></label>{% endfor %}</div></fieldset>{% endfor %}
+<div class="quiz-footer"><p>Результат сохранится в личном кабинете.</p><button class="btn btn-primary" type="submit">Завершить тест →</button></div>
+</form></main>
+{% endblock %}
+{% block scripts %}<script>
+(() => { const form = document.getElementById('quizForm'); const counter = document.getElementById('quizCounter'); let submitted = false; const update = () => counter.textContent = `Отвечено: ${form.querySelectorAll('input[type=radio]:checked').length} / ${form.querySelectorAll('fieldset').length}`; form.addEventListener('change', update); update(); form.addEventListener('submit', () => { submitted = true; form.querySelector('[type=submit]').disabled = true; }); window.addEventListener('beforeunload', event => { if (!submitted && form.querySelector('input[type=radio]:checked')) { event.preventDefault(); event.returnValue = ''; } }); })();
+</script>{% endblock %}

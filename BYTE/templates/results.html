@@ -1,0 +1,7 @@
+{% extends "app_base.html" %}
+{% block title %}Результаты{% endblock %}
+{% block body %}<main class="learning-page">
+<div class="page-heading"><div><span class="kicker">твой путь / шаг за шагом</span><h1>Мои результаты</h1><p>Каждая попытка — возможность увидеть, что уже получается и что повторить.</p></div><a class="btn btn-primary" href="{% url 'quizzes' %}">Выбрать тест →</a></div>
+{% if page_obj %}<div class="results-list">{% for attempt in page_obj %}<a class="result-row" href="{% url 'quiz_result' attempt.pk %}"><div><h2>{{ attempt.quiz_title }}</h2><p>{{ attempt.created_at|date:"d.m.Y, H:i" }} · {{ attempt.score }} из {{ attempt.total }} верно</p></div><span class="status-pill {% if attempt.passed %}success{% endif %}">{{ attempt.percent }}%</span><span aria-hidden="true">↗</span></a>{% endfor %}</div><nav class="pagination" aria-label="Страницы результатов">{% if page_obj.has_previous %}<a class="btn btn-ghost" href="?page={{ page_obj.previous_page_number }}">← Назад</a>{% endif %}<span>{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a class="btn btn-ghost" href="?page={{ page_obj.next_page_number }}">Далее →</a>{% endif %}</nav>
+{% else %}<div class="empty-state"><span class="empty-symbol">↗</span><h2>Первый результат впереди</h2><p>Пройди тест, чтобы увидеть здесь свой балл и разобрать ответы.</p><a class="btn btn-primary" href="{% url 'quizzes' %}">Перейти к тестам</a></div>{% endif %}
+</main>{% endblock %}

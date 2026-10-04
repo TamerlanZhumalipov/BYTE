@@ -1,0 +1,8 @@
+{% extends "app_base.html" %}
+{% block title %}Результат теста{% endblock %}
+{% block body %}<main class="learning-page narrow">
+<a class="back-link" href="{% url 'results' %}">← История результатов</a>
+<div class="result-hero"><div class="score-circle {% if attempt.passed %}passed{% endif %}">{{ attempt.percent }}<small>%</small></div><div><span class="kicker">{% if attempt.passed %}тест пройден{% else %}есть над чем поработать{% endif %}</span><h1>{{ attempt.quiz_title }}</h1><p>Верных ответов: {{ attempt.score }} из {{ attempt.total }} · {{ attempt.created_at|date:"d.m.Y, H:i" }}</p>{% if can_retry %}<a class="btn btn-ghost" href="{% url 'quiz_detail' attempt.quiz_id %}">Попробовать ещё раз ↗</a>{% endif %}</div></div>
+<h2 class="block-title">Разбор ответов</h2>
+{% for row in attempt.review %}<article class="review-card"><span class="status-pill {% if row.is_correct %}success{% else %}error{% endif %}">{% if row.is_correct %}✓ Верно{% else %}× Ошибка{% endif %}</span><h3>{{ forloop.counter }}. {{ row.text }}</h3><div class="answer-options">{% for letter, text in row.options %}<div class="review-option {% if letter == row.correct %}correct{% elif letter == row.selected %}incorrect{% endif %}"><b>{{ letter }}</b> {{ text }} {% if letter == row.correct %}<small>Правильный ответ</small>{% elif letter == row.selected %}<small>Ваш ответ</small>{% endif %}</div>{% endfor %}</div>{% if row.explanation %}<p class="explanation">{{ row.explanation }}</p>{% endif %}</article>{% endfor %}
+</main>{% endblock %}

@@ -1,0 +1,22 @@
+{# Рекурсивное дерево разделов. Принимает: nodes, depth. Из контекста берёт: current, open_ids #}
+<ul class="tree-list{% if depth %} tree-sub{% endif %}">
+{% for s in nodes %}
+  <li>
+  {% if s.kids %}
+    <details class="tree-group"{% if s.id in open_ids %} open{% endif %}>
+      <summary class="tree-summary">
+        {% if depth == 0 %}<span class="tree-num">{{ forloop.counter|stringformat:"02d" }}</span>{% endif %}
+        <span>{{ s.title }}</span>
+      </summary>
+      <a class="tree-link tree-overview{% if current and current.id == s.id %} is-current{% endif %}" href="{{ s.get_absolute_url }}">Вся тема</a>
+      {% include "_tree.html" with nodes=s.kids depth=depth|add:1 %}
+    </details>
+  {% else %}
+    <a class="tree-link{% if current and current.id == s.id %} is-current{% endif %}" href="{{ s.get_absolute_url }}">
+      {% if depth == 0 %}<span class="tree-num">{{ forloop.counter|stringformat:"02d" }}</span>{% endif %}
+      <span>{{ s.title }}</span>
+    </a>
+  {% endif %}
+  </li>
+{% endfor %}
+</ul>

@@ -1,0 +1,102 @@
+{% extends "app_base.html" %}
+{% load static %}
+
+{% block title %}{% if current %}{{ current.title }}{% else %}Материалы{% endif %}{% endblock %}
+
+{% block body %}
+<div class="dash">
+  <aside class="dash-side" id="dash-side" aria-label="Темы ЕНТ">
+    <a class="side-home" href="{% url 'dashboard' %}"><span>◈</span> Моё обучение</a>
+    <div class="side-progress"><div><span>Твой прогресс</span><strong>{{ progress_percent }}%</strong></div><progress value="{{ completed_count }}" max="{{ lesson_count|default:1 }}" aria-label="Изученные уроки"></progress><small>{{ completed_count }} из {{ lesson_count }} уроков</small></div>
+    <span class="dash-side-title">Программа курса</span>
+    <nav class="tree">
+      {% include "_tree.html" with nodes=roots depth=0 %}
+    </nav>
+  </aside>
+
+  <main class="dash-main">
+    <button class="btn btn-ghost btn-sm side-toggle" type="button" data-side-toggle aria-expanded="false" aria-controls="dash-side">☰ Разделы</button>
+
+    {% if current %}
+      <nav class="crumbs" aria-label="Путь">
+        <a href="{% url 'dashboard' %}">Материалы</a>
+        {% for a in breadcrumbs %}<span aria-hidden="true">/</span><a href="{{ a.get_absolute_url }}">{{ a.title }}</a>{% endfor %}
+      </nav>
+
+      <article class="doc">
+        <h1>{{ current.title }}</h1>
+        {% if current.summary %}<p class="doc-lead">{{ current.summary }}</p>{% endif %}
+
+        {% if current.content %}
+          <div class="doc-body">{{ current.content|safe }}</div>
+        {% elif not current.kids %}
+          <p class="doc-empty">Материал по этому разделу скоро появится.</p>
+        {% endif %}
+
+        {% if current.kids %}
+          <div class="doc-children">
+            <h2>В этом разделе</h2>
+            <ul class="child-list">
+              {% for k in current.kids %}
+              <li><a class="child-link" href="{{ k.get_absolute_url }}">
+                <strong>{{ k.title }}</strong>
+                {% if k.summary %}<span>{{ k.summary }}</span>{% endif %}
+              </a></li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        {% if current.content %}<div class="lesson-actions"><form method="post" action="{% url 'lesson_complete' current.slug %}">{% csrf_token %}<input type="hidden" name="completed" value="{% if is_completed %}0{% else %}1{% endif %}"><button class="btn {% if is_completed %}btn-ghost{% else %}btn-primary{% endif %}" type="submit">{% if is_completed %}✓ Изучено · отменить{% else %}Отметить изученным ✓{% endif %}</button></form>{% for quiz in section_quizzes %}<a class="btn btn-ghost" href="{% url 'quiz_detail' quiz.pk %}">Тест: {{ quiz.title }} →</a>{% endfor %}</div>{% endif %}
+        <div class="doc-nav">
+          {% if prev_section %}
+          <a class="prev" href="{{ prev_section.get_absolute_url }}"><span>Назад</span><strong>{{ prev_section.title }}</strong></a>
+          {% endif %}
+          {% if next_section %}
+          <a class="next" href="{{ next_section.get_absolute_url }}"><span>Дальше</span><strong>{{ next_section.title }}</strong></a>
+          {% endif %}
+        </div>
+      </article>
+
+    {% else %}
+      <div class="welcome">
+        <div class="welcome-top"><span class="kicker">кабинет ученика / BYTE</span><span class="today">{% now "d.m.Y" %}</span></div>
+        <h1>Привет, {{ user.first_name|default:user.get_username }}<span class="hello-dot">.</span></h1>
+        <p>Большие результаты начинаются с небольших шагов. Сделаем следующий?</p>
+        <div class="student-stats"><div><span class="stat-icon">◈</span><strong>{{ completed_count }}<small> / {{ lesson_count }}</small></strong><p>уроков изучено</p></div><div><span class="stat-icon">⌘</span><strong>{{ attempt_count }}</strong><p>тестов завершено</p></div><div><span class="stat-icon">↗</span><strong>{% if average_score != None %}{{ average_score }}<small>%</small>{% else %}—{% endif %}</strong><p>средний результат</p></div></div>
+        <div class="continue-card"><div><span class="eyebrow">{% if resume_section %}следующий шаг{% else %}твой темп, твой результат{% endif %}</span><h2>{% if resume_section %}{{ resume_section.title }}{% elif lesson_count %}Все уроки изучены!{% else %}Всё начинается с интереса{% endif %}</h2><p>{% if resume_section %}Разберись в теме, попробуй примеры и отметь урок изученным.{% elif lesson_count %}Проверь знания и вернись к темам, которые стоит повторить.{% else %}Материалы скоро появятся. А пока задай BYTE AI вопрос по информатике.{% endif %}</p>{% if resume_section %}<a class="btn btn-primary" href="{{ resume_section.get_absolute_url }}">Продолжить обучение →</a>{% else %}<a class="btn btn-primary" href="{% url 'quizzes' %}">Перейти к тестам →</a>{% endif %}</div><div class="continue-art" aria-hidden="true"><span class="art-label">YOUR NEXT LEVEL</span><span class="art-code">&lt;/&gt;</span><span class="art-line">learn. practice. repeat.</span></div></div>
+        {% if next_contest %}
+        <div class="contest-banner">
+          <div>
+            <strong>Лайв-контест «{{ next_contest.title }}»</strong>
+            <p>{{ next_contest.starts_at|date:"j E, H:i" }} · {{ next_contest.duration_minutes }} мин</p>
+          </div>
+          <a class="btn btn-primary" href="{% url 'contest' %}">Перейти к контесту</a>
+        </div>
+        {% endif %}
+
+        {% if roots %}
+        <div class="section-heading"><h2>Программа обучения</h2><span>{{ roots|length }} тем</span></div>
+        <div class="topic-grid">
+          {% for s in roots %}
+          <a class="topic-card" href="{{ s.get_absolute_url }}">
+            <span class="tree-num">{{ forloop.counter|stringformat:"02d" }}</span>
+            <h3>{{ s.title }}</h3>
+            {% if s.summary %}<p>{{ s.summary }}</p>{% endif %}
+            <div class="topic-meta"><span>{{ s.completed_count }} / {{ s.lesson_count }} уроков</span><strong>{{ s.percent }}%</strong></div><progress value="{{ s.completed_count }}" max="{{ s.lesson_count|default:1 }}" aria-label="Прогресс по теме {{ s.title }}"></progress>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="doc-empty">Материалы скоро появятся. Преподаватель готовит программу для тебя.</p>
+        {% endif %}
+        {% if recent_attempts %}<div class="section-heading"><h2>Последние результаты</h2><a href="{% url 'results' %}">Все результаты ↗</a></div><div class="results-list">{% for attempt in recent_attempts %}<a class="result-row" href="{% url 'quiz_result' attempt.pk %}"><div><h3>{{ attempt.quiz_title }}</h3><p>{{ attempt.created_at|date:"d.m.Y" }} · {{ attempt.score }} / {{ attempt.total }}</p></div><span class="status-pill {% if attempt.passed %}success{% endif %}">{{ attempt.percent }}%</span></a>{% endfor %}</div>{% endif %}
+      </div>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/dashboard.js' %}"></script>
+{% endblock %}
