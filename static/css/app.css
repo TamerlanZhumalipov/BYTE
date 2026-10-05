@@ -1147,3 +1147,7 @@ html.light-theme .video-frame{background:#e8f2f8}
   .quiz-submit-bar .btn{width:100%}
   .quiz-result{padding:17px}
 }
+
+
+/* Reset landing-page section spacing inside the authenticated app. */
+.lesson-block,.quiz-review,.analytics-section{padding:0}
