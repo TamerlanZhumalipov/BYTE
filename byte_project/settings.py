@@ -83,7 +83,7 @@ LOGOUT_REDIRECT_URL = "index"
 # ---------------------------------------------------------------------------
 
 # Значения читаются из файла .env в корне проекта (создайте его из .env.example).
-# Ключ ANTHROPIC_API_KEY никогда не должен попадать в Git — .env уже в .gitignore.
+# Ключ GEMINI_API_KEY никогда не должен попадать в Git — .env уже в .gitignore.
 def _load_dotenv():
     env_path = BASE_DIR / ".env"
     if not env_path.exists():
@@ -99,7 +99,7 @@ def _load_dotenv():
 _load_dotenv()
 
 AI_ENABLED = os.environ.get("AI_ENABLED", "1") == "1"
-AI_MODEL = os.environ.get("AI_MODEL", "gemini-2.5-flash-lite")
+AI_MODEL = os.environ.get("AI_MODEL", "gemini-3.8-flash")
 AI_MAX_TOKENS = int(os.environ.get("AI_MAX_TOKENS", "700"))
 AI_HISTORY_MESSAGES = 8    # сколько последних реплик диалога передаём модели как контекст
 AI_COOLDOWN_SECONDS = 4    # минимальный промежуток между вопросами одного ученика
