@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .forms import LeadForm
+from .ai import ai_chat
 from .judge import LANGUAGES, MAX_CODE_BYTES, run_submission
 from .models import Contest, ContestAccount, ContestTask, Section, Submission, LessonProgress, QuizAttempt
 
