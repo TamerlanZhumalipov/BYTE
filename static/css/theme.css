@@ -1,0 +1,15 @@
+:root{--theme-shadow:0 16px 44px rgba(0,0,0,.16)}
+html.light-theme{color-scheme:light;--bg:#f5fbff;--bg-elevated:#ffffff;--bg-card:#ffffff;--border:#d9eaf2;--border-soft:#eaf4f8;--text:#102238;--text-muted:#536b80;--text-faint:#8295a7;--blue:#1678f2;--purple:#7564ee;--cyan:#08bdcf;--gradient:linear-gradient(135deg,#1678f2 0%,#08bdcf 54%,#7564ee 100%);--theme-shadow:0 16px 44px rgba(20,104,145,.10)}
+html.light-theme body{background:var(--bg);color:var(--text)}
+html.light-theme .site-header,html.light-theme .app-header{background:rgba(255,255,255,.88);border-color:var(--border-soft);box-shadow:0 1px 0 rgba(15,100,140,.04)}
+html.light-theme .hero,html.light-theme section{background-color:var(--bg)}
+html.light-theme .track-card,html.light-theme .format-card,html.light-theme .topic-card,html.light-theme .doc-children a,html.light-theme .contest-banner,html.light-theme .ai-panel,html.light-theme .code-panel,html.light-theme .pricing-table,html.light-theme .faq-item{background:var(--bg-card);border-color:var(--border);box-shadow:var(--theme-shadow)}
+html.light-theme .dash-side{background:#f9fdff;border-color:var(--border)}
+html.light-theme .tree-link:hover,html.light-theme .tree-summary:hover{background:var(--border-soft)}
+html.light-theme .tree-link.is-current{background:linear-gradient(100deg,rgba(22,120,242,.10),rgba(8,189,207,.10));color:var(--blue)}
+html.light-theme .doc-body pre,html.light-theme .doc-body code{background:#eef8fb;color:#18304a;border-color:var(--border)}
+html.light-theme .btn-ghost{background:#fff;color:var(--text);border-color:var(--border)}
+html.light-theme .btn-ghost:hover{background:#eafaff;border-color:var(--cyan)}
+html.light-theme .ai-bubble{background:#f0f8fc;color:var(--text)}
+html.light-theme .ai-msg-user .ai-bubble{background:linear-gradient(135deg,rgba(22,120,242,.13),rgba(8,189,207,.13))}
+.theme-button{width:40px;height:40px;display:inline-grid;place-items:center;flex:0 0 40px;border:1px solid var(--border);border-radius:12px;background:var(--bg-card);color:var(--text);cursor:pointer;font-size:18px;line-height:1;transition:.18s ease}.theme-button:hover{border-color:var(--cyan);transform:translateY(-1px)}
