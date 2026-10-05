@@ -11,9 +11,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/style.css' %}">
-<link rel="stylesheet" href="{% static 'css/app.css' %}">
+<link rel="stylesheet" href="{% static 'css/app.css' %}?v=20261005-ai3">
 <link rel="stylesheet" href="{% static 'css/theme.css' %}">
-<link rel="stylesheet" href="{% static 'css/motion.css' %}">
+<link rel="stylesheet" href="{% static 'css/motion.css' %}?v=20261005-ai3">
 </head>
 <body class="app-body">
 <header class="app-header"><div class="app-header-inner">
@@ -22,6 +22,7 @@
 <div class="app-user"><span class="app-user-name">{{ user.get_username }}</span><button class="theme-button" id="themeButton" type="button" aria-label="Включить светлую тему">☀</button><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn btn-ghost btn-sm" type="submit">Выйти</button></form></div>
 </div></header>
 {% block body %}{% endblock %}
+{% block floating_ui %}{% endblock %}
 {% block scripts %}{% endblock %}
 <script src="{% static 'js/motion.js' %}"></script>
 </body></html>
