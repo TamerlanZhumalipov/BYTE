@@ -88,54 +88,57 @@
       </div>
     {% endif %}
 
-    {% if ai_enabled %}
-    <div class="ai" id="ai"
-      data-ask-url="{% if current %}{% url 'ai_ask' current.slug %}{% else %}{% url 'ai_ask_home' %}{% endif %}"
-      data-reset-url="{% if current %}{% url 'ai_reset' current.slug %}{% else %}{% url 'ai_reset_home' %}{% endif %}">
-      <button class="ai-fab" id="ai-fab" type="button" aria-expanded="false" aria-controls="ai-panel">
-        <span class="ai-fab-icon ai-star" aria-hidden="true">✦</span>
-        <span class="ai-fab-copy"><strong>BYTE AI</strong><small>Спросить помощника</small></span>
-      </button>
-
-      <div class="ai-panel" id="ai-panel" hidden>
-        <div class="ai-panel-head">
-          <div class="ai-headline">
-            <span class="ai-head-icon" aria-hidden="true">✦</span>
-            <div>
-              <strong>BYTE AI</strong>
-              <span>{% if current %}Контекст: {{ current.title }}{% else %}Личный помощник по BYTE и ЕНТ{% endif %}</span>
-            </div>
-          </div>
-          <div class="ai-panel-actions">
-            <button class="btn btn-ghost btn-sm" id="ai-reset" type="button">Новый диалог</button>
-            <button class="ai-close" id="ai-close" type="button" aria-label="Свернуть">✕</button>
-          </div>
-        </div>
-
-        <div class="ai-messages" id="ai-messages" aria-live="polite">
-          {% if not ai_history %}
-          <div class="ai-msg ai-msg-assistant">
-            <div class="ai-bubble">{% if current %}Сәлем! Я BYTE AI. Помогу разобраться с темой «{{ current.title }}», кодом или задачей.{% else %}Сәлем! Я BYTE AI. Могу помочь выбрать тему, составить план подготовки к ЕНТ, объяснить информатику или разобрать код.{% endif %}</div>
-          </div>
-          {% endif %}
-          {% for m in ai_history %}
-          <div class="ai-msg ai-msg-{{ m.role }}"><div class="ai-bubble">{{ m.content|linebreaksbr }}</div></div>
-          {% endfor %}
-        </div>
-
-        <form class="ai-form" id="ai-form">
-          <textarea id="ai-input" placeholder="{% if current %}Спросите про этот материал…{% else %}Спросите BYTE AI…{% endif %}" rows="1" maxlength="2000" required></textarea>
-          <button class="btn btn-primary btn-sm ai-send" type="submit" aria-label="Отправить">↑</button>
-        </form>
-        <p class="ai-hint">BYTE AI учитывает контекст страницы и историю диалога. Важные ответы лучше перепроверять.</p>
-      </div>
-    </div>
-    {% endif %}
   </main>
 </div>
 {% endblock %}
 
+{% block floating_ui %}
+{% if ai_enabled %}
+<div class="ai" id="ai" aria-label="BYTE AI assistant"
+  data-ask-url="{% if current %}{% url 'ai_ask' current.slug %}{% else %}{% url 'ai_ask_home' %}{% endif %}"
+  data-reset-url="{% if current %}{% url 'ai_reset' current.slug %}{% else %}{% url 'ai_reset_home' %}{% endif %}">
+  <button class="ai-fab" id="ai-fab" type="button" aria-expanded="false" aria-controls="ai-panel">
+    <span class="ai-fab-icon ai-star" aria-hidden="true">✦</span>
+    <span class="ai-fab-copy"><strong>BYTE AI</strong><small>Спросить помощника</small></span>
+  </button>
+
+  <div class="ai-panel" id="ai-panel" aria-hidden="true">
+    <div class="ai-panel-head">
+      <div class="ai-headline">
+        <span class="ai-head-icon" aria-hidden="true">✦</span>
+        <div>
+          <strong>BYTE AI</strong>
+          <span>{% if current %}Контекст: {{ current.title }}{% else %}Личный помощник по BYTE и ЕНТ{% endif %}</span>
+        </div>
+      </div>
+      <div class="ai-panel-actions">
+        <button class="btn btn-ghost btn-sm" id="ai-reset" type="button">Новый диалог</button>
+        <button class="ai-close" id="ai-close" type="button" aria-label="Свернуть">✕</button>
+      </div>
+    </div>
+
+    <div class="ai-messages" id="ai-messages" aria-live="polite">
+      {% if not ai_history %}
+      <div class="ai-msg ai-msg-assistant">
+        <div class="ai-bubble">{% if current %}Сәлем! Я BYTE AI. Помогу разобраться с темой «{{ current.title }}», кодом или задачей.{% else %}Сәлем! Я BYTE AI. Могу помочь выбрать тему, составить план подготовки к ЕНТ, объяснить информатику или разобрать код.{% endif %}</div>
+      </div>
+      {% endif %}
+      {% for m in ai_history %}
+      <div class="ai-msg ai-msg-{{ m.role }}"><div class="ai-bubble">{{ m.content|linebreaksbr }}</div></div>
+      {% endfor %}
+    </div>
+
+    <form class="ai-form" id="ai-form">
+      <textarea id="ai-input" placeholder="{% if current %}Спросите про этот материал…{% else %}Спросите BYTE AI…{% endif %}" rows="1" maxlength="2000" required></textarea>
+      <button class="btn btn-primary btn-sm ai-send" type="submit" aria-label="Отправить">↑</button>
+    </form>
+    <p class="ai-hint">BYTE AI учитывает контекст страницы и историю диалога. Важные ответы лучше перепроверять.</p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
 {% block scripts %}
 <script src="{% static 'js/dashboard.js' %}"></script>
-{% if ai_enabled %}<script src="{% static 'js/ai.js' %}"></script>{% endif %}
+{% if ai_enabled %}<script src="{% static 'js/ai.js' %}?v=20261005-ai3"></script>{% endif %}
 {% endblock %}
