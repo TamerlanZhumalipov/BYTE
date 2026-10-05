@@ -140,7 +140,9 @@ def ask(section, path_titles, history, message):
             message = str(getattr(exc, "message", "") or exc)
 
             # Если конкретная модель недоступна проекту — пробуем резервную.
-            if code == 404:
+            # Если модель отсутствует, перегружена или временно падает —
+            # переключаемся на следующую модель BYTE AI.
+            if code in (404, 500, 502, 503, 504):
                 continue
 
             lower = message.lower()
@@ -159,12 +161,6 @@ def ask(section, path_titles, history, message):
                     "Лимит Gemini API исчерпан или сервис временно ограничил запросы. Попробуйте немного позже.",
                     code=code,
                 ) from exc
-            if code and code >= 500:
-                raise AIServiceError(
-                    "Gemini временно недоступен на стороне Google. Попробуйте ещё раз через минуту.",
-                    code=code,
-                ) from exc
-
             raise AIServiceError(
                 f"Gemini отклонил запрос (код {code or 'API'}). Проверьте настройки API.",
                 code=code,
@@ -179,9 +175,15 @@ def ask(section, path_titles, history, message):
             ) from exc
 
     if last_error is not None:
+        last_code = getattr(last_error, "code", None)
+        if last_code in (500, 502, 503, 504):
+            raise AIServiceError(
+                "Сейчас Gemini перегружен: BYTE AI уже попробовал несколько резервных моделей. Попробуйте ещё раз через минуту.",
+                code=last_code,
+            ) from last_error
         raise AIServiceError(
-            "Выбранная модель Gemini недоступна для этого API-ключа. Попробованы резервные модели.",
-            code=getattr(last_error, "code", 404),
+            "Выбранная модель Gemini недоступна для этого API-ключа. BYTE AI попробовал резервные модели.",
+            code=last_code or 404,
         ) from last_error
 
     raise AIServiceError("BYTE AI не смог выбрать модель Gemini.", code="NO_MODEL")
