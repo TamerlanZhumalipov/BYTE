@@ -31,7 +31,7 @@
     }
 
     function openPanel() {
-      panel.hidden = false;
+      root.classList.add('is-open');
       panel.setAttribute('aria-hidden', 'false');
       fab.setAttribute('aria-expanded', 'true');
       fab.classList.add('is-open');
@@ -40,7 +40,7 @@
     }
 
     function closePanel() {
-      panel.hidden = true;
+      root.classList.remove('is-open');
       panel.setAttribute('aria-hidden', 'true');
       fab.setAttribute('aria-expanded', 'false');
       fab.classList.remove('is-open');
@@ -51,7 +51,7 @@
     fab.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
-      panel.hidden ? openPanel() : closePanel();
+      root.classList.contains('is-open') ? closePanel() : openPanel();
     });
 
     closeBtn?.addEventListener('click', (event) => {
@@ -60,7 +60,7 @@
     });
 
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && !panel.hidden) closePanel();
+      if (event.key === 'Escape' && root.classList.contains('is-open')) closePanel();
     });
 
     input.addEventListener('input', () => {
