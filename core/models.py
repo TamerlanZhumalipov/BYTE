@@ -1,4 +1,5 @@
 from datetime import timedelta
+from urllib.parse import parse_qs, urlparse
 
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
@@ -53,6 +54,11 @@ class Section(models.Model):
         "Содержимое (HTML)", blank=True,
         help_text="Можно использовать теги: h2, h3, p, ul, ol, table, pre, code, div class=\"note\".",
     )
+    video_url = models.URLField(
+        "Видео урока",
+        blank=True,
+        help_text="Ссылка на YouTube/Vimeo или другой источник видео. Для YouTube ссылка автоматически превращается во встраиваемую.",
+    )
     is_published = models.BooleanField("Показывать ученикам", default=True)
 
     class Meta:
@@ -65,6 +71,120 @@ class Section(models.Model):
 
     def get_absolute_url(self):
         return reverse("section", args=[self.slug])
+
+    @property
+    def video_embed_url(self):
+        """Возвращает ссылку, подходящую для iframe. YouTube нормализуется автоматически."""
+        url = (self.video_url or "").strip()
+        if not url:
+            return ""
+        try:
+            parsed = urlparse(url)
+            host = (parsed.hostname or "").lower()
+            if host in {"youtu.be", "www.youtu.be"}:
+                video_id = parsed.path.strip("/")
+                return f"https://www.youtube.com/embed/{video_id}" if video_id else url
+            if host in {"youtube.com", "www.youtube.com", "m.youtube.com"}:
+                if parsed.path.startswith("/embed/"):
+                    return url
+                video_id = parse_qs(parsed.query).get("v", [""])[0]
+                return f"https://www.youtube.com/embed/{video_id}" if video_id else url
+        except ValueError:
+            return url
+        return url
+
+
+# ---------------------------------------------------------------------------
+# Проверочные тесты по основным темам
+# ---------------------------------------------------------------------------
+
+class TopicQuiz(models.Model):
+    topic = models.OneToOneField(
+        Section,
+        verbose_name="Основная тема",
+        related_name="topic_quiz",
+        on_delete=models.CASCADE,
+        limit_choices_to={"parent__isnull": True},
+    )
+    pass_percent = models.PositiveSmallIntegerField(
+        "Проходной процент",
+        default=70,
+        help_text="Минимальный процент правильных ответов, чтобы открыть следующую тему.",
+    )
+
+    class Meta:
+        verbose_name = "тест по теме"
+        verbose_name_plural = "тесты по темам"
+
+    def __str__(self):
+        return f"Тест: {self.topic.title}"
+
+
+class QuizQuestion(models.Model):
+    quiz = models.ForeignKey(
+        TopicQuiz,
+        verbose_name="Тест",
+        related_name="questions",
+        on_delete=models.CASCADE,
+    )
+    order = models.PositiveSmallIntegerField("Порядок", default=1)
+    text = models.TextField("Вопрос")
+
+    class Meta:
+        ordering = ["order", "id"]
+        verbose_name = "вопрос теста"
+        verbose_name_plural = "вопросы теста"
+
+    def __str__(self):
+        return f"{self.quiz.topic.title}: {self.order}. {self.text[:60]}"
+
+
+class QuizChoice(models.Model):
+    question = models.ForeignKey(
+        QuizQuestion,
+        verbose_name="Вопрос",
+        related_name="choices",
+        on_delete=models.CASCADE,
+    )
+    text = models.CharField("Вариант ответа", max_length=500)
+    is_correct = models.BooleanField("Правильный ответ", default=False)
+
+    class Meta:
+        ordering = ["id"]
+        verbose_name = "вариант ответа"
+        verbose_name_plural = "варианты ответа"
+
+    def __str__(self):
+        return self.text[:80]
+
+
+class QuizAttempt(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Ученик",
+        related_name="topic_quiz_attempts",
+        on_delete=models.CASCADE,
+    )
+    quiz = models.ForeignKey(
+        TopicQuiz,
+        verbose_name="Тест",
+        related_name="attempts",
+        on_delete=models.CASCADE,
+    )
+    score_percent = models.PositiveSmallIntegerField("Результат, %")
+    correct_count = models.PositiveSmallIntegerField("Правильных ответов")
+    total_questions = models.PositiveSmallIntegerField("Всего вопросов")
+    passed = models.BooleanField("Тест пройден", default=False)
+    answers = models.JSONField("Ответы", default=dict, blank=True)
+    created_at = models.DateTimeField("Попытка", auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "попытка теста"
+        verbose_name_plural = "результаты тестов"
+
+    def __str__(self):
+        return f"{self.user} · {self.quiz.topic.title} · {self.score_percent}%"
 
 
 # ---------------------------------------------------------------------------
