@@ -6,7 +6,7 @@ from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, JsonResponse
-from django.db.models import Avg
+from django.db.models import Avg, Max
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -44,7 +44,6 @@ def lead_create(request):
 # ---------------------------------------------------------------------------
 
 def _build_tree():
-    """Все опубликованные разделы одним запросом, собранные в дерево."""
     sections = list(Section.objects.filter(is_published=True))
     by_parent = {}
     for section in sections:
@@ -63,7 +62,6 @@ def _flatten(nodes):
 
 
 def _upcoming_contest():
-    """Ближайший контест, который ещё не закончился."""
     now = timezone.now()
     for contest in Contest.objects.filter(starts_at__gte=now - timedelta(days=1)).order_by("starts_at"):
         if contest.ends_at >= now:
@@ -127,7 +125,7 @@ def dashboard(request, slug=None):
 
 
 # ---------------------------------------------------------------------------
-# Контест: отдельный вход по логину/паролю, выданному куратором
+# Контест
 # ---------------------------------------------------------------------------
 
 def _current_account(request):
@@ -138,19 +136,56 @@ def _current_account(request):
 
 
 def _submission_json(sub):
-    return {"id": sub.id,"verdict": sub.verdict,"label": sub.get_verdict_display(),"passed": sub.passed,"total": sub.total,"marks": sub.marks,"message": sub.message,"created_at": timezone.localtime(sub.created_at).strftime("%H:%M:%S")}
+    return {
+        "id": sub.id, "verdict": sub.verdict, "label": sub.get_verdict_display(),
+        "passed": sub.passed, "total": sub.total, "marks": sub.marks,
+        "message": sub.message, "language": sub.language,
+        "time": timezone.localtime(sub.created_at).strftime("%H:%M:%S"),
+        "created_at": timezone.localtime(sub.created_at).strftime("%H:%M:%S"),
+    }
 
 
 def contest(request):
     account = _current_account(request)
     if not account:
-        return render(request, "contest_login.html")
+        return render(request, "contest_login.html", {"active_tab": "contest"})
+
     contest_obj = account.contest
-    tasks = list(contest_obj.tasks.all())
+    tasks = list(contest_obj.tasks.prefetch_related("tests").all())
     now = timezone.now()
     state = contest_obj.state(now)
-    last_submissions = {task.id: Submission.objects.filter(account=account, task=task).first() for task in tasks}
-    return render(request, "contest.html", {"account":account,"contest":contest_obj,"tasks":tasks,"state":state,"last_submissions":last_submissions,"now":now,"active_tab":"contest"})
+
+    items = []
+    data_tasks = []
+    for task in tasks:
+        total = task.tests.count()
+        submissions = list(Submission.objects.filter(account=account, task=task).order_by("-created_at")[:8])
+        best = max((sub.passed for sub in submissions), default=0)
+        items.append({"task": task, "total": total, "best": best})
+        data_tasks.append({
+            "id": task.id,
+            "title": task.title,
+            "total": total,
+            "best": best,
+            "history": [_submission_json(sub) for sub in submissions],
+        })
+
+    seconds_to_start = max(0, math.ceil((contest_obj.starts_at - now).total_seconds()))
+    remaining = max(0, math.ceil((contest_obj.ends_at - now).total_seconds())) if state == "running" else 0
+    contest_data = {
+        "contestId": contest_obj.id,
+        "accountId": account.id,
+        "state": state,
+        "duration": contest_obj.duration_minutes * 60,
+        "remaining": remaining,
+        "submitUrl": reverse("contest_submit"),
+        "tasks": data_tasks,
+    }
+    return render(request, "contest.html", {
+        "account": account, "contest": contest_obj, "tasks": tasks, "items": items,
+        "state": state, "now": now, "seconds_to_start": seconds_to_start,
+        "contest_data": contest_data, "active_tab": "contest",
+    })
 
 
 @require_POST
@@ -159,7 +194,7 @@ def contest_login(request):
     password = request.POST.get("password", "")
     account = ContestAccount.objects.select_related("contest").filter(login=login, is_active=True).first()
     if not account or not account.check_password(password):
-        return render(request, "contest_login.html", {"error":"Неверный логин или пароль."}, status=400)
+        return render(request, "contest_login.html", {"error":"Неверный логин или пароль.", "active_tab":"contest"}, status=400)
     request.session[CONTEST_SESSION_KEY] = account.pk
     return redirect("contest")
 
@@ -176,11 +211,13 @@ def contest_submit(request):
     if not account:
         return JsonResponse({"ok":False,"error":"Сначала войдите в контест."}, status=401)
     contest_obj = account.contest
-    if contest_obj.state() != "running":
-        return JsonResponse({"ok":False,"error":"Отправлять решения можно только во время контеста."}, status=403)
+    state = contest_obj.state()
+    if state != "running":
+        return JsonResponse({"ok":False,"error":"Отправлять решения можно только во время контеста.", "state":state}, status=403)
     try:
         data = json.loads(request.body)
-        task = ContestTask.objects.get(pk=data.get("task"), contest=contest_obj)
+        task_id = data.get("task_id", data.get("task"))
+        task = ContestTask.objects.get(pk=task_id, contest=contest_obj)
     except (json.JSONDecodeError, ContestTask.DoesNotExist):
         return JsonResponse({"ok":False,"error":"Задача не найдена."}, status=400)
     language = data.get("language")
@@ -200,7 +237,10 @@ def contest_submit(request):
     except Exception:
         logger.exception("Judge crashed for submission %s", submission.pk)
         submission.verdict="RE"; submission.message="Ошибка системы проверки."; submission.save(update_fields=["verdict","message"])
-    return JsonResponse({"ok":True,"submission":_submission_json(submission)})
+
+    best = Submission.objects.filter(account=account, task=task).aggregate(value=Max("passed"))["value"] or 0
+    remaining = max(0, math.ceil((contest_obj.ends_at - timezone.now()).total_seconds()))
+    return JsonResponse({"ok":True,"submission":_submission_json(submission), "best":best, "remaining":remaining})
 
 
 @login_required
