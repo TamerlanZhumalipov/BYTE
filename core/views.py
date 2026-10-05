@@ -6,6 +6,7 @@ from datetime import timedelta
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.http import Http404, JsonResponse
+from django.db import IntegrityError
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -32,11 +33,34 @@ def index(request):
 
 @require_POST
 def lead_create(request):
-    form = LeadForm(request.POST)
-    if form.is_valid():
-        form.save()
-        return JsonResponse({"ok": True})
-    return JsonResponse({"ok": False, "errors": form.errors}, status=400)
+    # Принимаем как актуальное поле phone, так и старое contact,
+    # чтобы форма не ломалась при кэше старого HTML/JS в браузере.
+    data = request.POST.copy()
+    if not data.get("phone") and data.get("contact"):
+        data["phone"] = data.get("contact", "")
+
+    form = LeadForm(data)
+    if not form.is_valid():
+        errors = {
+            field: [str(message) for message in messages]
+            for field, messages in form.errors.items()
+        }
+        return JsonResponse({"ok": False, "errors": errors}, status=400)
+
+    try:
+        lead = form.save()
+    except IntegrityError:
+        logger.exception("Не удалось сохранить заявку")
+        return JsonResponse(
+            {"ok": False, "error": "Не удалось сохранить заявку. Попробуйте ещё раз."},
+            status=500,
+        )
+
+    return JsonResponse({
+        "ok": True,
+        "lead_id": lead.pk,
+        "message": "Заявка принята. Мы свяжемся с вами в течение дня.",
+    })
 
 
 # ---------------------------------------------------------------------------
