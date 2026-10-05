@@ -125,14 +125,9 @@ def dashboard(request, slug=None):
         prev_section = flat[index - 1] if index > 0 else None
         next_section = flat[index + 1] if index < len(flat) - 1 else None
 
-    ai_history = [
-        {"role": m.role, "content": m.content}
-        for m in AIMessage.objects.filter(
-            user=request.user,
-            section=current if current else None,
-            archived=False,
-        )
-    ]
+    # История BYTE AI хранится только в sessionStorage браузера.
+    # После закрытия вкладки/браузера новый чат начинается с нуля.
+    ai_history = []
 
     return render(request, "dashboard.html", {
         "active_tab": "materials",
@@ -348,18 +343,36 @@ def _section_path_titles(section):
     return titles
 
 
-def _ai_request_message(request):
+def _ai_request_payload(request):
     try:
         data = json.loads(request.body)
         message = (data.get("message") or "").strip()
+        raw_history = data.get("history") or []
     except (ValueError, TypeError, AttributeError):
-        return None, JsonResponse({"error": "Некорректный запрос."}, status=400)
+        return None, None, JsonResponse({"error": "Некорректный запрос."}, status=400)
 
     if not message:
-        return None, JsonResponse({"error": "Введите вопрос."}, status=400)
+        return None, None, JsonResponse({"error": "Введите вопрос."}, status=400)
     if len(message) > 2000:
-        return None, JsonResponse({"error": "Слишком длинное сообщение (максимум 2000 символов)."}, status=400)
-    return message, None
+        return None, None, JsonResponse(
+            {"error": "Слишком длинное сообщение (максимум 2000 символов)."},
+            status=400,
+        )
+
+    # История приходит из sessionStorage текущей вкладки и не хранится
+    # сервером как контекст чата между посещениями.
+    history = []
+    if isinstance(raw_history, list):
+        for item in raw_history[-settings.AI_HISTORY_MESSAGES:]:
+            if not isinstance(item, dict):
+                continue
+            role = item.get("role")
+            content = str(item.get("content") or "").strip()
+            if role not in {"user", "assistant"} or not content:
+                continue
+            history.append({"role": role, "content": content[:4000]})
+
+    return message, history, None
 
 
 def _ai_rate_limit(request):
@@ -383,18 +396,15 @@ def ai_ask_home(request):
     if not ai_module.is_configured():
         return JsonResponse({"error": "BYTE AI сейчас недоступен. Проверьте GEMINI_API_KEY."}, status=503)
 
-    message, error = _ai_request_message(request)
+    message, history, error = _ai_request_payload(request)
     if error:
         return error
     limited = _ai_rate_limit(request)
     if limited:
         return limited
 
-    history_qs = (
-        AIMessage.objects.filter(user=request.user, section=None, archived=False)
-        .order_by("-created_at")[: settings.AI_HISTORY_MESSAGES]
-    )
-    history = [{"role": m.role, "content": m.content} for m in reversed(history_qs)]
+    # Сообщения можно оставлять в БД для лимитов/админки, но они больше
+    # не восстанавливаются в чат и не используются как история новой сессии.
     AIMessage.objects.create(user=request.user, section=None, role="user", content=message)
 
     try:
@@ -431,18 +441,12 @@ def ai_ask(request, slug):
     if section is None:
         raise Http404("Раздел не найден")
 
-    message, error = _ai_request_message(request)
+    message, history, error = _ai_request_payload(request)
     if error:
         return error
     limited = _ai_rate_limit(request)
     if limited:
         return limited
-
-    history_qs = (
-        AIMessage.objects.filter(user=request.user, section=section, archived=False)
-        .order_by("-created_at")[: settings.AI_HISTORY_MESSAGES]
-    )
-    history = [{"role": m.role, "content": m.content} for m in reversed(history_qs)]
 
     AIMessage.objects.create(user=request.user, section=section, role="user", content=message)
 
