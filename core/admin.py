@@ -2,7 +2,8 @@ from django import forms
 from django.contrib import admin
 
 from .models import (
-    Contest, ContestAccount, ContestTask, Lead, Section, Submission, TaskTest, AIMessage,
+    AIMessage, Contest, ContestAccount, ContestTask, Lead, QuizAttempt, QuizChoice,
+    QuizQuestion, Section, Submission, TaskTest, TopicQuiz,
 )
 
 
@@ -15,11 +16,60 @@ class LeadAdmin(admin.ModelAdmin):
 
 @admin.register(Section)
 class SectionAdmin(admin.ModelAdmin):
-    list_display = ("title", "parent", "order", "is_published")
+    list_display = ("title", "parent", "order", "has_video", "is_published")
     list_editable = ("order", "is_published")
     list_filter = ("parent", "is_published")
     search_fields = ("title", "content")
     prepopulated_fields = {"slug": ("title",)}
+
+    @admin.display(boolean=True, description="Видео")
+    def has_video(self, obj):
+        return bool(obj.video_url)
+
+
+class QuizQuestionInline(admin.StackedInline):
+    model = QuizQuestion
+    extra = 1
+    fields = ("order", "text")
+
+
+@admin.register(TopicQuiz)
+class TopicQuizAdmin(admin.ModelAdmin):
+    list_display = ("topic", "pass_percent", "questions_count")
+    list_filter = ("pass_percent",)
+    inlines = [QuizQuestionInline]
+
+    @admin.display(description="Вопросов")
+    def questions_count(self, obj):
+        return obj.questions.count()
+
+
+class QuizChoiceInline(admin.TabularInline):
+    model = QuizChoice
+    extra = 4
+    fields = ("text", "is_correct")
+
+
+@admin.register(QuizQuestion)
+class QuizQuestionAdmin(admin.ModelAdmin):
+    list_display = ("quiz", "order", "short_text")
+    list_filter = ("quiz",)
+    inlines = [QuizChoiceInline]
+
+    @admin.display(description="Вопрос")
+    def short_text(self, obj):
+        return obj.text[:80]
+
+
+@admin.register(QuizAttempt)
+class QuizAttemptAdmin(admin.ModelAdmin):
+    list_display = ("created_at", "user", "quiz", "score_percent", "passed")
+    list_filter = ("passed", "quiz")
+    search_fields = ("user__username", "quiz__topic__title")
+    readonly_fields = [f.name for f in QuizAttempt._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
 
 
 class ContestTaskInline(admin.StackedInline):
