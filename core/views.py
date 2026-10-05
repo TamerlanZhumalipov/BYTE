@@ -3,6 +3,7 @@ import logging
 import math
 from datetime import timedelta
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.http import Http404, JsonResponse
@@ -14,7 +15,9 @@ from django.views.decorators.http import require_POST
 
 from .forms import LeadForm
 from .judge import LANGUAGES, MAX_CODE_BYTES, run_submission
-from .models import AIMessage, Contest, ContestAccount, ContestTask, Section, Submission
+from .models import (
+    AIMessage, Contest, ContestAccount, ContestTask, QuizAttempt, Section, Submission, TopicQuiz,
+)
 from . import ai as ai_module
 
 logger = logging.getLogger(__name__)
@@ -98,10 +101,71 @@ def _upcoming_contest():
     return None
 
 
+def _root_topic(section):
+    node = section
+    while node.parent_id:
+        node = node.parent
+    return node
+
+
+def _mark_topic_lock(node, locked):
+    node.is_locked = locked
+    for child in getattr(node, "kids", []):
+        _mark_topic_lock(child, locked)
+
+
+def _decorate_learning_path(user, roots):
+    """Добавляет темам состояние прогресса и последовательно открывает программу."""
+    quizzes = {
+        quiz.topic_id: quiz
+        for quiz in TopicQuiz.objects.filter(topic__in=roots).select_related("topic")
+    }
+    attempts = list(
+        QuizAttempt.objects.filter(user=user, quiz__topic__in=roots)
+        .select_related("quiz", "quiz__topic")
+        .order_by("-created_at")
+    )
+
+    best_by_topic = {}
+    latest_by_topic = {}
+    passed_topics = set()
+    attempts_count = {}
+    for attempt in attempts:
+        topic_id = attempt.quiz.topic_id
+        attempts_count[topic_id] = attempts_count.get(topic_id, 0) + 1
+        best_by_topic[topic_id] = max(best_by_topic.get(topic_id, 0), attempt.score_percent)
+        latest_by_topic.setdefault(topic_id, attempt)
+        if attempt.passed:
+            passed_topics.add(topic_id)
+
+    unlocked = True
+    for root in roots:
+        root.quiz_obj = quizzes.get(root.id)
+        root.best_score = best_by_topic.get(root.id)
+        root.latest_attempt = latest_by_topic.get(root.id)
+        root.attempts_count = attempts_count.get(root.id, 0)
+        root.is_completed = root.id in passed_topics
+        root.is_locked = not unlocked
+        _mark_topic_lock(root, root.is_locked)
+
+        # Следующая основная тема открывается только после успешного теста текущей.
+        if not root.is_completed:
+            unlocked = False
+
+    return {
+        "quizzes": quizzes,
+        "best_by_topic": best_by_topic,
+        "latest_by_topic": latest_by_topic,
+        "passed_topics": passed_topics,
+        "attempts": attempts,
+    }
+
+
 @login_required
 def dashboard(request, slug=None):
     roots, by_id = _build_tree()
     flat = _flatten(roots)
+    learning = _decorate_learning_path(request.user, roots)
 
     current = None
     breadcrumbs = []
@@ -112,6 +176,12 @@ def dashboard(request, slug=None):
         current = next((s for s in flat if s.slug == slug), None)
         if current is None:
             raise Http404("Раздел не найден")
+        if getattr(current, "is_locked", False):
+            messages.warning(
+                request,
+                "Эта тема пока закрыта. Сначала пройдите тест предыдущей основной темы.",
+            )
+            return redirect("dashboard")
 
         parent_id = current.parent_id
         while parent_id in by_id:
@@ -124,6 +194,19 @@ def dashboard(request, slug=None):
         index = flat.index(current)
         prev_section = flat[index - 1] if index > 0 else None
         next_section = flat[index + 1] if index < len(flat) - 1 else None
+        if next_section is not None and getattr(next_section, "is_locked", False):
+            next_section = None
+
+    current_root = _root_topic(current) if current else None
+    current_quiz = learning["quizzes"].get(current_root.id) if current_root else None
+    current_best_score = learning["best_by_topic"].get(current_root.id) if current_root else None
+    current_topic_completed = bool(current_root and current_root.id in learning["passed_topics"])
+
+    next_root = None
+    if current_root and current_root in roots:
+        root_index = roots.index(current_root)
+        if root_index < len(roots) - 1:
+            next_root = roots[root_index + 1]
 
     # История BYTE AI хранится только в sessionStorage браузера.
     # После закрытия вкладки/браузера новый чат начинается с нуля.
@@ -138,8 +221,189 @@ def dashboard(request, slug=None):
         "next_section": next_section,
         "open_ids": open_ids,
         "next_contest": _upcoming_contest(),
+        "current_root": current_root,
+        "current_quiz": current_quiz,
+        "current_best_score": current_best_score,
+        "current_topic_completed": current_topic_completed,
+        "next_root": next_root,
         "ai_enabled": ai_module.is_configured(),
         "ai_history": ai_history,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Проверочные тесты и аналитика
+# ---------------------------------------------------------------------------
+
+@login_required
+def topic_quiz(request, slug):
+    roots, _ = _build_tree()
+    learning = _decorate_learning_path(request.user, roots)
+    topic = next((root for root in roots if root.slug == slug), None)
+    if topic is None:
+        raise Http404("Основная тема не найдена")
+    if topic.is_locked:
+        messages.warning(request, "Сначала завершите предыдущую основную тему.")
+        return redirect("dashboard")
+
+    quiz = learning["quizzes"].get(topic.id)
+    if quiz is None:
+        messages.info(request, "Проверочный тест для этой темы пока не добавлен.")
+        return redirect(topic.get_absolute_url())
+
+    questions = list(quiz.questions.prefetch_related("choices").all())
+    result = None
+
+    if request.method == "POST":
+        if not questions:
+            messages.info(request, "В тесте пока нет вопросов.")
+            return redirect(topic.get_absolute_url())
+
+        correct_count = 0
+        answers = {}
+        review = []
+        for question in questions:
+            selected_raw = request.POST.get(f"q_{question.id}", "")
+            try:
+                selected_id = int(selected_raw)
+            except (TypeError, ValueError):
+                selected_id = None
+
+            choices = list(question.choices.all())
+            selected = next((choice for choice in choices if choice.id == selected_id), None)
+            correct_choice = next((choice for choice in choices if choice.is_correct), None)
+            is_correct = bool(selected and selected.is_correct)
+            if is_correct:
+                correct_count += 1
+            answers[str(question.id)] = selected_id
+            review.append({
+                "question": question,
+                "selected": selected,
+                "correct_choice": correct_choice,
+                "is_correct": is_correct,
+            })
+
+        total = len(questions)
+        score = round(correct_count * 100 / total)
+        passed = score >= quiz.pass_percent
+        attempt = QuizAttempt.objects.create(
+            user=request.user,
+            quiz=quiz,
+            score_percent=score,
+            correct_count=correct_count,
+            total_questions=total,
+            passed=passed,
+            answers=answers,
+        )
+
+        # После успешной попытки пересчитываем путь, чтобы сразу показать открытую тему.
+        refreshed = _decorate_learning_path(request.user, roots)
+        topic_index = roots.index(topic)
+        unlocked_next = roots[topic_index + 1] if passed and topic_index < len(roots) - 1 else None
+
+        result = {
+            "attempt": attempt,
+            "score": score,
+            "passed": passed,
+            "correct_count": correct_count,
+            "total": total,
+            "review": review,
+            "unlocked_next": unlocked_next,
+        }
+
+    best_score = (
+        QuizAttempt.objects.filter(user=request.user, quiz=quiz)
+        .order_by("-score_percent")
+        .values_list("score_percent", flat=True)
+        .first()
+    )
+
+    return render(request, "topic_quiz.html", {
+        "active_tab": "materials",
+        "topic": topic,
+        "quiz": quiz,
+        "questions": questions,
+        "result": result,
+        "best_score": best_score,
+    })
+
+
+def _analytics_forecast(roots):
+    points = [
+        (index + 1, root.best_score)
+        for index, root in enumerate(roots)
+        if root.best_score is not None
+    ]
+    if not points:
+        return None, "Недостаточно данных"
+
+    if len(points) == 1:
+        return int(points[0][1]), "Первичный прогноз"
+
+    xs = [point[0] for point in points]
+    ys = [point[1] for point in points]
+    x_mean = sum(xs) / len(xs)
+    y_mean = sum(ys) / len(ys)
+    denominator = sum((x - x_mean) ** 2 for x in xs)
+    slope = (
+        sum((x - x_mean) * (y - y_mean) for x, y in points) / denominator
+        if denominator else 0
+    )
+    intercept = y_mean - slope * x_mean
+
+    projected = []
+    known = {x: y for x, y in points}
+    for index in range(1, len(roots) + 1):
+        value = known.get(index, intercept + slope * index)
+        projected.append(max(0, min(100, value)))
+
+    forecast = round(sum(projected) / len(projected))
+    if slope > 2:
+        trend = "Результаты растут"
+    elif slope < -2:
+        trend = "Есть нисходящий тренд"
+    else:
+        trend = "Результаты стабильны"
+    return forecast, trend
+
+
+@login_required
+def analytics(request):
+    roots, _ = _build_tree()
+    learning = _decorate_learning_path(request.user, roots)
+
+    rows = []
+    for index, root in enumerate(roots, start=1):
+        quiz = learning["quizzes"].get(root.id)
+        latest = learning["latest_by_topic"].get(root.id)
+        rows.append({
+            "index": index,
+            "topic": root,
+            "quiz": quiz,
+            "best_score": root.best_score,
+            "latest": latest,
+            "attempts_count": root.attempts_count,
+            "completed": root.is_completed,
+            "locked": root.is_locked,
+        })
+
+    total_topics = len(roots)
+    completed_topics = sum(1 for root in roots if root.is_completed)
+    progress_percent = round(completed_topics * 100 / total_topics) if total_topics else 0
+    scored = [root.best_score for root in roots if root.best_score is not None]
+    average_score = round(sum(scored) / len(scored)) if scored else None
+    forecast_score, trend = _analytics_forecast(roots)
+
+    return render(request, "analytics.html", {
+        "active_tab": "analytics",
+        "rows": rows,
+        "total_topics": total_topics,
+        "completed_topics": completed_topics,
+        "progress_percent": progress_percent,
+        "average_score": average_score,
+        "forecast_score": forecast_score,
+        "trend": trend,
+        "recent_attempts": learning["attempts"][:6],
     })
 
 
