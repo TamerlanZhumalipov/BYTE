@@ -1,0 +1,68 @@
+/* BYTE motion system */
+:root{--motion-fast:160ms;--motion-base:260ms;--motion-slow:520ms;--motion-ease:cubic-bezier(.22,1,.36,1);--motion-soft:cubic-bezier(.4,0,.2,1)}
+
+html{scroll-behavior:smooth}
+body{animation:byte-page-in .48s var(--motion-ease) both}
+@keyframes byte-page-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+a,button,input,select,textarea,.btn,.theme-button,.app-tab,.tree-link,.tree-summary,.topic-card,.track-card,.format-card,.faq-item,.pricing-cell,.leaderboard,.contest-banner,.code-panel,.child-link,.doc-nav a,.cx-tab,.cx-result,.ai-fab,.ai-panel{
+  transition:
+    color var(--motion-fast) var(--motion-soft),
+    background-color var(--motion-base) var(--motion-soft),
+    border-color var(--motion-base) var(--motion-soft),
+    box-shadow var(--motion-base) var(--motion-ease),
+    transform var(--motion-base) var(--motion-ease),
+    opacity var(--motion-base) var(--motion-soft);
+}
+
+.btn,.theme-button,.ai-fab,.app-tab,.cx-tab{will-change:transform}
+.btn:hover,.theme-button:hover,.ai-fab:hover{transform:translateY(-2px)}
+.btn:active,.theme-button:active,.ai-fab:active,.app-tab:active,.cx-tab:active{transform:translateY(0) scale(.98)}
+
+.brand img{transition:transform var(--motion-base) var(--motion-ease),filter var(--motion-base) var(--motion-ease)}
+.brand:hover img{transform:rotate(-4deg) scale(1.05)}
+.brand:hover{filter:saturate(1.08)}
+
+.main-nav a,.app-tab{position:relative}
+.main-nav a::after{content:"";position:absolute;left:10%;right:10%;bottom:-5px;height:2px;border-radius:99px;background:var(--gradient);transform:scaleX(0);transform-origin:left;transition:transform var(--motion-base) var(--motion-ease)}
+.main-nav a:hover::after{transform:scaleX(1)}
+
+.track-card:hover,.format-card:hover,.topic-card:hover,.contest-banner:hover,.code-panel:hover,.leaderboard:hover,.faq-item:hover{transform:translateY(-4px);box-shadow:0 18px 48px rgba(0,0,0,.12)}
+html.light-theme .track-card:hover,html.light-theme .format-card:hover,html.light-theme .topic-card:hover,html.light-theme .contest-banner:hover,html.light-theme .code-panel:hover,html.light-theme .leaderboard:hover,html.light-theme .faq-item:hover{box-shadow:0 20px 48px rgba(20,105,140,.11)}
+
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .68s var(--motion-ease),transform .68s var(--motion-ease)}
+.reveal.is-visible{opacity:1;transform:none}
+.reveal[data-reveal="left"]{transform:translateX(-26px)}
+.reveal[data-reveal="right"]{transform:translateX(26px)}
+.reveal[data-reveal="scale"]{transform:scale(.965)}
+.reveal.is-visible[data-reveal]{transform:none}
+
+.stagger-children>*{opacity:0;transform:translateY(18px);transition:opacity .55s var(--motion-ease),transform .55s var(--motion-ease)}
+.stagger-children.is-visible>*{opacity:1;transform:none}
+.stagger-children.is-visible>*:nth-child(2){transition-delay:60ms}
+.stagger-children.is-visible>*:nth-child(3){transition-delay:120ms}
+.stagger-children.is-visible>*:nth-child(4){transition-delay:180ms}
+.stagger-children.is-visible>*:nth-child(5){transition-delay:240ms}
+.stagger-children.is-visible>*:nth-child(6){transition-delay:300ms}
+
+.faq-item[open]{box-shadow:0 12px 34px rgba(0,0,0,.08)}
+.faq-item summary{transition:color var(--motion-fast) var(--motion-soft),padding var(--motion-base) var(--motion-ease)}
+.faq-item[open] summary{color:var(--blue)}
+
+input:focus,select:focus,textarea:focus{transform:translateY(-1px);box-shadow:0 0 0 4px color-mix(in srgb,var(--cyan) 12%,transparent)}
+
+.ai-panel:not([hidden]){animation:byte-ai-in .28s var(--motion-ease) both}
+@keyframes byte-ai-in{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+.ai-msg{animation:byte-msg-in .26s var(--motion-ease) both}
+@keyframes byte-msg-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.code-caret{animation:blink 1s step-end infinite}
+.hero-copy>*{animation:byte-hero-up .62s var(--motion-ease) both}
+.hero-copy>*:nth-child(2){animation-delay:70ms}.hero-copy>*:nth-child(3){animation-delay:130ms}.hero-copy>*:nth-child(4){animation-delay:190ms}.hero-copy>*:nth-child(5){animation-delay:250ms}
+@keyframes byte-hero-up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+  .reveal,.stagger-children>*{opacity:1!important;transform:none!important}
+}
