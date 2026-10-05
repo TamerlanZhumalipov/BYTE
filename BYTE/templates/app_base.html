@@ -2,131 +2,24 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="csrf-token" content="{{ csrf_token }}">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="csrf-token" content="{{ csrf_token }}">
 <title>{% block title %}Кабинет{% endblock %} — BYTE</title>
 <script src="{% static 'js/theme.js' %}"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{% static 'css/style.css' %}">
-<link rel="stylesheet" href="{% static 'css/app.css' %}">
-<link rel="stylesheet" href="{% static 'css/theme.css' %}">
-<link rel="stylesheet" href="{% static 'css/ai.css' %}">
-<link rel="stylesheet" href="{% static 'css/learning.css' %}">
+<link rel="stylesheet" href="{% static 'css/style.css' %}"><link rel="stylesheet" href="{% static 'css/app.css' %}"><link rel="stylesheet" href="{% static 'css/theme.css' %}"><link rel="stylesheet" href="{% static 'css/ai.css' %}"><link rel="stylesheet" href="{% static 'css/learning.css' %}">
 </head>
-<body class="app-body" data-section="{{ current.slug|default:'' }}">
-<a class="skip-link" href="#main-content">К содержимому</a>
-
-<header class="app-header">
-  <div class="app-header-inner">
-    <a class="brand" href="{% url 'dashboard' %}">
-      <img src="{% static 'img/logo.png' %}" alt="BYTE">
-      <span>BYTE<span class="brand-dot">.</span></span>
-    </a>
-    <nav class="app-tabs" aria-label="Разделы кабинета">
-      <a class="app-tab{% if active_tab == 'materials' %} is-active{% endif %}" href="{% url 'dashboard' %}">Материалы</a>
-      <a class="app-tab{% if active_tab == 'quizzes' %} is-active{% endif %}" href="{% url 'quizzes' %}">Тесты</a>
-      <a class="app-tab{% if active_tab == 'results' %} is-active{% endif %}" href="{% url 'results' %}">Результаты</a>
-      <a class="app-tab{% if active_tab == 'contest' %} is-active{% endif %}" href="{% url 'contest' %}">Контесты</a>
-    </nav>
-    <div class="app-user">
-
-  <span class="app-user-name">
-    {{ user.get_username }}
-  </span>
-
-  <!-- Переключатель темы -->
-  <button
-    class="theme-button"
-    id="themeButton"
-    type="button"
-    aria-label="Сменить тему"
-  >
-    ☀
-  </button>
-
-  <form method="post" action="{% url 'logout' %}">
-    {% csrf_token %}
-    <button class="btn btn-ghost btn-sm" type="submit">
-      Выйти
-    </button>
-  </form>
-
-    </div>
-  </div>
-</header>
-
+<body class="app-body" data-section="{{ current.slug|default:'' }}"><a class="skip-link" href="#main-content">К содержимому</a>
+<header class="app-header"><div class="app-header-inner"><a class="brand" href="{% url 'dashboard' %}"><img src="{% static 'img/logo.png' %}" alt="BYTE"><span>BYTE<span class="brand-dot">.</span></span></a><nav class="app-tabs" aria-label="Разделы кабинета"><a class="app-tab{% if active_tab == 'materials' %} is-active{% endif %}" href="{% url 'dashboard' %}">Обучение</a><a class="app-tab{% if active_tab == 'quizzes' %} is-active{% endif %}" href="{% url 'quizzes' %}">Тесты</a><a class="app-tab{% if active_tab == 'results' %} is-active{% endif %}" href="{% url 'results' %}">Результаты</a><a class="app-tab{% if active_tab == 'contest' %} is-active{% endif %}" href="{% url 'contest' %}">Контесты</a></nav><div class="app-user"><span class="app-user-name">{{ user.get_username }}</span><button class="theme-button" id="themeButton" type="button" aria-label="Сменить тему">☀</button><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn btn-ghost btn-sm" type="submit">Выйти</button></form></div></div></header>
 <div id="main-content" tabindex="-1">{% block body %}{% endblock %}</div>
-<!-- BYTE AI -->
 <div class="byte-ai">
-
-  <button class="byte-ai-button" id="byteAiButton" type="button" aria-controls="byteAiWindow" aria-expanded="false" aria-label="Открыть BYTE AI">
-    <span class="byte-ai-icon">✦</span>
-    <span>BYTE AI</span>
-  </button>
-
-  <div class="byte-ai-window" id="byteAiWindow" role="dialog" aria-label="BYTE AI — помощник по информатике" hidden>
-
-    <div class="byte-ai-header">
-      <div>
-        <div class="byte-ai-title">
-          <span>✦</span> BYTE AI
-        </div>
-        <div class="byte-ai-subtitle">
-          Помощник по информатике
-        </div>
-      </div>
-
-      <button
-        class="byte-ai-close"
-        id="byteAiClose"
-        type="button"
-        aria-label="Закрыть"
-      >
-        ×
-      </button>
-    </div>
-
-    <div class="ai-toolbar"><span>{% if current %}Тема: {{ current.title }}{% else %}Учимся разбираться вместе{% endif %}</span><button type="button" id="byteAiClear">Очистить</button></div>
-    <div class="byte-ai-messages" id="byteAiMessages" role="log" aria-label="Диалог с помощником" aria-live="polite">
-
-      <div class="byte-ai-message byte-ai-message-bot">
-        Привет! 👋<br>
-        Я BYTE AI. Могу помочь с Python, C++, SQL,
-        HTML, CSS, алгоритмами и подготовкой к ЕНТ.
-      </div>
-
-    </div>
-
-    <div class="ai-suggestions"><button type="button" data-ai-prompt="Объясни {% if current %}тему «{{ current.title }}»{% else %}циклы в Python{% endif %} простыми словами">Объясни тему</button><button type="button" data-ai-prompt="Дай тренировочную задачу {% if current %}по теме «{{ current.title }}»{% else %}по информатике для ЕНТ{% endif %}">Дай задачу</button></div>
-    <div class="byte-ai-input-area">
-
-      <textarea
-        id="byteAiInput"
-        class="byte-ai-input"
-        placeholder="Задайте вопрос..."
-        rows="1" maxlength="4000" aria-label="Ваш вопрос BYTE AI"
-      ></textarea>
-
-      <button
-        id="byteAiSend"
-        class="byte-ai-send"
-        type="button"
-        aria-label="Отправить"
-      >
-        ↑
-      </button>
-
-    </div>
-
-    <p class="ai-note">AI может ошибаться. Проверяй важные ответы.</p>
+  <button class="byte-ai-button" id="byteAiButton" type="button" aria-controls="byteAiWindow" aria-expanded="false" aria-label="Открыть BYTE AI"><span class="byte-ai-brandmark" aria-hidden="true"><b>B</b><i>&lt;/&gt;</i></span><span class="byte-ai-button-copy"><strong>BYTE AI</strong><small>Спросить помощника</small></span></button>
+  <div class="byte-ai-window" id="byteAiWindow" role="dialog" aria-label="BYTE AI — персональный помощник" hidden>
+    <div class="byte-ai-header"><div class="byte-ai-identity"><span class="byte-ai-brandmark is-small" aria-hidden="true"><b>B</b><i>&lt;/&gt;</i></span><div><div class="byte-ai-title">BYTE AI <span>β</span></div><div class="byte-ai-subtitle">Твой AI-наставник по информатике</div></div></div><button class="byte-ai-close" id="byteAiClose" type="button" aria-label="Закрыть">×</button></div>
+    <div class="ai-toolbar"><span>{% if current %}<b>Контекст:</b> {{ current.title }}{% else %}<b>BYTE:</b> готов к обучению{% endif %}</span><button type="button" id="byteAiClear">Новый чат</button></div>
+    <div class="byte-ai-messages" id="byteAiMessages" role="log" aria-live="polite"><div class="byte-ai-message byte-ai-message-bot"><span class="ai-message-label">BYTE AI</span>Сәлем! Я помогу понять тему, найти ошибку в коде или подготовиться к ЕНТ. Не просто дам ответ — объясню, как к нему прийти.</div></div>
+    <div class="ai-suggestions"><button type="button" data-ai-prompt="Объясни {% if current %}тему «{{ current.title }}»{% else %}сложную тему по информатике{% endif %} простыми словами и приведи пример">Объясни проще</button><button type="button" data-ai-prompt="Дай мне тренировочную задачу {% if current %}по теме «{{ current.title }}»{% else %}для ЕНТ по информатике{% endif %}, но сначала не показывай ответ">Дай задачу</button><button type="button" data-ai-prompt="Проверь мои знания {% if current %}по теме «{{ current.title }}»{% else %}по информатике{% endif %} тремя короткими вопросами">Проверь меня</button></div>
+    <div class="byte-ai-input-area"><textarea id="byteAiInput" class="byte-ai-input" placeholder="Спроси BYTE AI…" rows="1" maxlength="4000" aria-label="Ваш вопрос BYTE AI"></textarea><button id="byteAiSend" class="byte-ai-send" type="button" aria-label="Отправить">↑</button></div><p class="ai-note">BYTE AI может ошибаться — проверяй важную информацию.</p>
   </div>
-
 </div>
-
-{% block scripts %}{% endblock %}
-<script src="{% static 'js/ai.js' %}"></script>
-</body>
-</html>
+{% block scripts %}{% endblock %}<script src="{% static 'js/ai.js' %}"></script></body></html>
