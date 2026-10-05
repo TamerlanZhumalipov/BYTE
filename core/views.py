@@ -399,9 +399,12 @@ def ai_ask_home(request):
 
     try:
         answer = ai_module.ask(None, [], history, message)
-    except Exception:
+    except ai_module.AIServiceError as exc:
         logger.exception("Ошибка BYTE AI на главной кабинета")
-        return JsonResponse({"error": "Не получилось получить ответ. Попробуйте ещё раз чуть позже."}, status=502)
+        return JsonResponse({"error": exc.public_message, "code": exc.code}, status=502)
+    except Exception:
+        logger.exception("Неожиданная ошибка BYTE AI на главной кабинета")
+        return JsonResponse({"error": "Внутренняя ошибка BYTE AI. Проверьте терминал Django."}, status=502)
 
     reply = AIMessage.objects.create(
         user=request.user, section=None, role="assistant", content=answer
@@ -445,9 +448,12 @@ def ai_ask(request, slug):
 
     try:
         answer = ai_module.ask(section, _section_path_titles(section), history, message)
-    except Exception:  # noqa: BLE001 — не показываем ученику внутреннюю ошибку/трассировку
+    except ai_module.AIServiceError as exc:
         logger.exception("Ошибка ИИ-помощника")
-        return JsonResponse({"error": "Не получилось получить ответ. Попробуйте ещё раз чуть позже."}, status=502)
+        return JsonResponse({"error": exc.public_message, "code": exc.code}, status=502)
+    except Exception:
+        logger.exception("Неожиданная ошибка ИИ-помощника")
+        return JsonResponse({"error": "Внутренняя ошибка BYTE AI. Проверьте терминал Django."}, status=502)
 
     reply = AIMessage.objects.create(user=request.user, section=section, role="assistant", content=answer)
     return JsonResponse({"content": reply.content})
