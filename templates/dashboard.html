@@ -110,7 +110,13 @@
           {% if prev_section %}
           <a class="prev" href="{{ prev_section.get_absolute_url }}"><span>Назад</span><strong>{{ prev_section.title }}</strong></a>
           {% endif %}
-          {% if next_section %}
+
+          {% if next_is_quiz %}
+          <a class="next next-quiz" href="{% url 'topic_quiz' current_root.slug %}">
+            <span>Следующий шаг · закрепление</span>
+            <strong>Пройти тест по теме →</strong>
+          </a>
+          {% elif next_section %}
           <a class="next" href="{{ next_section.get_absolute_url }}"><span>Дальше</span><strong>{{ next_section.title }}</strong></a>
           {% endif %}
         </div>
