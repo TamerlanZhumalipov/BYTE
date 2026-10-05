@@ -1,0 +1,108 @@
+{% extends "app_base.html" %}
+{% load static %}
+
+{% block title %}{{ contest.title }}{% endblock %}
+
+{% block body %}
+{% if state == "upcoming" %}
+
+<main class="auth-main">
+  <div class="auth-card wait-card">
+    <span class="kicker">контест скоро начнётся</span>
+    <h1 class="auth-title" style="text-align:left; margin-top:0;">{{ contest.title }}</h1>
+    <p>Участник: <strong>{{ account.full_name|default:account.login }}</strong></p>
+    <p>Начало: {{ contest.starts_at|date:"j E, H:i" }} · длительность {{ contest.duration_minutes }} мин.</p>
+    <div class="cx-timer cx-timer-big" id="wait-timer" data-seconds="{{ seconds_to_start }}">--:--:--</div>
+    <p class="field-hint">Страница обновится сама, как только контест начнётся.</p>
+    <form method="post" action="{% url 'contest_logout' %}" style="margin-top:22px;">
+      {% csrf_token %}
+      <button class="btn btn-ghost btn-sm" type="submit">Выйти из контеста</button>
+    </form>
+  </div>
+</main>
+
+{% else %}
+
+<div class="cx">
+  <div class="cx-top">
+    <div class="cx-title">
+      {{ contest.title }}
+      <span class="cx-user">{{ account.full_name|default:account.login }} · {{ account.login }}</span>
+    </div>
+    <div class="cx-top-right">
+      <div class="cx-timer" id="cx-timer" role="timer" aria-label="Оставшееся время">--:--:--</div>
+      <form method="post" action="{% url 'contest_logout' %}">
+        {% csrf_token %}
+        <button class="btn btn-ghost btn-sm" type="submit">Выйти</button>
+      </form>
+    </div>
+  </div>
+  <div class="cx-progress" aria-hidden="true"><span id="cx-bar"></span></div>
+
+  <div class="cx-closed" id="cx-closed"{% if state != "finished" %} hidden{% endif %}>Контест завершён. Отправка решений закрыта — ваши результаты сохранены.</div>
+
+  <div class="cx-tabs" role="tablist" aria-label="Задачи">
+    {% for item in items %}
+    <button class="cx-tab{% if forloop.first %} is-active{% endif %}" type="button" role="tab"
+            aria-selected="{% if forloop.first %}true{% else %}false{% endif %}" data-task-tab="{{ item.task.id }}">
+      <span class="cx-tab-num">{{ forloop.counter }}</span>
+      <span>{{ item.task.title }}</span>
+      <span class="cx-chip" data-chip="{{ item.task.id }}">{{ item.best }}/{{ item.total }}</span>
+    </button>
+    {% endfor %}
+  </div>
+
+  <div class="cx-body">
+    <div class="cx-statement">
+      {% for item in items %}
+      <article class="cx-panel doc" data-task-panel="{{ item.task.id }}"{% if not forloop.first %} hidden{% endif %}>
+        <h2>{{ item.task.title }}</h2>
+        <p class="cx-limits">лимит {{ item.task.time_limit }} с на тест · тестов: {{ item.total }}</p>
+        <div class="doc-body">{{ item.task.statement|safe }}</div>
+      </article>
+      {% endfor %}
+    </div>
+
+    <div class="cx-work">
+      <div class="cx-toolbar">
+        <label class="cx-lang">Язык
+          <select id="cx-lang">
+            <option value="python">Python</option>
+            <option value="cpp">C++</option>
+          </select>
+        </label>
+        <span class="cx-hint">Ctrl/⌘ + Enter — отправить</span>
+        <button class="btn btn-primary" id="cx-submit" type="button">Отправить решение</button>
+      </div>
+      <p class="cx-notice" id="cx-notice" role="alert" hidden></p>
+
+      <textarea id="cx-editor" class="cx-editor" rows="16" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Код решения"></textarea>
+
+      <div class="cx-result" aria-live="polite">
+        <div class="cx-verdict" id="cx-verdict">Отправьте решение — здесь появится результат проверки.</div>
+        <div class="cx-grid" id="cx-grid" aria-label="Результаты по тестам"></div>
+        <div class="cx-legend">
+          <span><i class="cx-cell p">✓</i> верно</span>
+          <span><i class="cx-cell f">✕</i> неверный ответ</span>
+          <span><i class="cx-cell t">T</i> время</span>
+          <span><i class="cx-cell e">!</i> ошибка</span>
+        </div>
+        <pre class="cx-message" id="cx-message" hidden></pre>
+      </div>
+
+      <div class="cx-history">
+        <h3>Ваши отправки по этой задаче</h3>
+        <ul id="cx-history"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{ contest_data|json_script:"contest-data" }}
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/contest.js' %}"></script>
+{% endblock %}

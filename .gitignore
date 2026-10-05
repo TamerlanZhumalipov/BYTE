@@ -1,0 +1,17 @@
+# Окружение и кэш Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Локальные данные (пользователи, результаты контестов) — храните отдельной копией
+db.sqlite3
+staticfiles/
+
+# Секреты
+.env
+
+# macOS / редакторы
+.DS_Store
+.idea/
+.vscode/
