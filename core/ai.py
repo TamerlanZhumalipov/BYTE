@@ -15,6 +15,15 @@ from django.utils.html import strip_tags
 
 MAX_CONTEXT_CHARS = 6000   # сколько текста раздела передаём модели
 
+class AIServiceError(Exception):
+    """Безопасная для показа ученику ошибка Gemini API."""
+
+    def __init__(self, message, code=None):
+        super().__init__(message)
+        self.public_message = message
+        self.code = code
+
+
 SYSTEM_PROMPT = """Ты — учебный помощник курса BYTE. Курс готовит школьников Казахстана к ЕНТ по информатике \
 и учит программированию: Python, C++, SQL, HTML и CSS. Ты работаешь как терпеливый репетитор.
 
@@ -74,17 +83,18 @@ def build_system_prompt(section=None, path_titles=None):
 
 
 def ask(section, path_titles, history, message):
-    """Отправляет вопрос ученика вместе с историей диалога и возвращает текст ответа.
+    """Отправляет вопрос Gemini и возвращает текст ответа.
 
-    history — список {"role": "user" | "assistant", "content": "..."}, начинается с реплики ученика.
-    Gemini называет роль ассистента "model", а не "assistant" — конвертируем при сборке запроса.
+    Для ошибки Gemini поднимает AIServiceError с безопасным сообщением,
+    которое можно показать в интерфейсе без раскрытия API-ключа.
     """
     from google import genai
-    from google.genai import types
+    from google.genai import errors, types
 
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     if not api_key:
-        raise RuntimeError("GEMINI_API_KEY is not configured")
+        raise AIServiceError("Gemini API не настроен: отсутствует GEMINI_API_KEY.", code="NO_KEY")
+
     client = genai.Client(api_key=api_key)
 
     contents = [
@@ -94,14 +104,85 @@ def ask(section, path_titles, history, message):
         )
         for m in history
     ]
-    contents.append(types.Content(role="user", parts=[types.Part.from_text(text=message)]))
-
-    response = client.models.generate_content(
-        model=settings.AI_MODEL,
-        contents=contents,
-        config=types.GenerateContentConfig(
-            system_instruction=build_system_prompt(section, path_titles),
-            max_output_tokens=settings.AI_MAX_TOKENS,
-        ),
+    contents.append(
+        types.Content(role="user", parts=[types.Part.from_text(text=message)])
     )
-    return (response.text or "").strip() or "Не получилось сформулировать ответ. Попробуйте задать вопрос иначе."
+
+    primary = getattr(settings, "AI_MODEL", "gemini-3.8-flash")
+    fallbacks = getattr(settings, "AI_FALLBACK_MODELS", [])
+    models = []
+    for model in [primary, *fallbacks]:
+        if model and model not in models:
+            models.append(model)
+
+    last_error = None
+    for model in models:
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=build_system_prompt(section, path_titles),
+                    max_output_tokens=settings.AI_MAX_TOKENS,
+                ),
+            )
+            text = (response.text or "").strip()
+            if text:
+                return text
+            raise AIServiceError(
+                "Gemini вернул пустой ответ. Попробуйте переформулировать вопрос.",
+                code="EMPTY_RESPONSE",
+            )
+
+        except errors.APIError as exc:
+            last_error = exc
+            code = getattr(exc, "code", None)
+            message = str(getattr(exc, "message", "") or exc)
+
+            # Если конкретная модель недоступна проекту — пробуем резервную.
+            if code == 404:
+                continue
+
+            lower = message.lower()
+            if code in (400, 401) and ("api key" in lower or "key" in lower):
+                raise AIServiceError(
+                    "Gemini отклонил API-ключ. Проверьте GEMINI_API_KEY в файле .env.",
+                    code=code,
+                ) from exc
+            if code == 403:
+                raise AIServiceError(
+                    "У API-ключа нет доступа к Gemini API. Проверьте ограничения ключа и проект Google AI Studio.",
+                    code=code,
+                ) from exc
+            if code == 429:
+                raise AIServiceError(
+                    "Лимит Gemini API исчерпан или сервис временно ограничил запросы. Попробуйте немного позже.",
+                    code=code,
+                ) from exc
+            if code and code >= 500:
+                raise AIServiceError(
+                    "Gemini временно недоступен на стороне Google. Попробуйте ещё раз через минуту.",
+                    code=code,
+                ) from exc
+
+            raise AIServiceError(
+                f"Gemini отклонил запрос (код {code or 'API'}). Проверьте настройки API.",
+                code=code,
+            ) from exc
+
+        except AIServiceError:
+            raise
+        except Exception as exc:
+            raise AIServiceError(
+                "Ошибка подключения к Gemini SDK. Обновите зависимости и повторите попытку.",
+                code="SDK_ERROR",
+            ) from exc
+
+    if last_error is not None:
+        raise AIServiceError(
+            "Выбранная модель Gemini недоступна для этого API-ключа. Попробованы резервные модели.",
+            code=getattr(last_error, "code", 404),
+        ) from last_error
+
+    raise AIServiceError("BYTE AI не смог выбрать модель Gemini.", code="NO_MODEL")
+
