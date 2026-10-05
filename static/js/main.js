@@ -168,53 +168,69 @@ function initSignupForm() {
   const form = document.querySelector('[data-signup-form]');
   if (!form) return;
 
-  form.addEventListener('submit', (e) => {
+  const status = form.querySelector('[data-form-status]');
+  const button = form.querySelector('button[type="submit"]');
+
+  const showStatus = (message, ok = false) => {
+    if (!status) return;
+    status.textContent = message;
+    status.style.color = ok ? 'var(--cyan)' : '#e08a8a';
+  };
+
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const status = form.querySelector('[data-form-status]');
-    const button = form.querySelector('button[type="submit"]');
+    if (button?.disabled) return;
+
     const originalText = button ? button.textContent : '';
+    showStatus('');
 
     if (button) {
       button.classList.remove('is-success');
       button.classList.add('is-loading');
       button.disabled = true;
+      button.textContent = 'Отправляем…';
     }
 
-    fetch('/api/leads/', {
-      method: 'POST',
-      body: new FormData(form), // includes csrfmiddlewaretoken from {% csrf_token %}
-    })
-      .then((response) => {
-        if (!response.ok) throw new Error('request failed');
-        return response.json();
-      })
-      .then(() => {
-        if (button) {
-          button.classList.remove('is-loading');
-          button.classList.add('is-success');
-          button.textContent = 'Заявка отправлена ✓';
-        }
-        if (status) {
-          status.textContent = 'Мы свяжемся с вами в течение дня.';
-          status.style.color = 'var(--cyan)';
-        }
-        form.reset();
-      })
-      .catch(() => {
-        if (button) button.classList.remove('is-loading');
-        if (status) {
-          status.textContent = 'Не получилось отправить заявку. Попробуйте ещё раз.';
-          status.style.color = '#e08a8a';
-        }
-      })
-      .finally(() => {
-        setTimeout(() => {
-          if (button) {
-            button.classList.remove('is-loading', 'is-success');
-            button.textContent = originalText;
-            button.disabled = false;
-          }
-        }, 2200);
+    try {
+      const response = await fetch(form.action || '/api/leads/', {
+        method: 'POST',
+        body: new FormData(form),
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
       });
+
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok || !body.ok) {
+        const fieldErrors = body.errors
+          ? Object.values(body.errors).flat().join(' ')
+          : '';
+        throw new Error(fieldErrors || body.error || 'Не получилось отправить заявку.');
+      }
+
+      if (button) {
+        button.classList.remove('is-loading');
+        button.classList.add('is-success');
+        button.textContent = 'Заявка отправлена ✓';
+      }
+      showStatus(body.message || 'Мы свяжемся с вами в течение дня.', true);
+      form.reset();
+
+      window.setTimeout(() => {
+        if (button) {
+          button.classList.remove('is-success');
+          button.textContent = originalText;
+          button.disabled = false;
+        }
+      }, 1800);
+    } catch (error) {
+      if (button) {
+        button.classList.remove('is-loading', 'is-success');
+        button.textContent = originalText;
+        button.disabled = false;
+      }
+      showStatus(error.message || 'Не получилось отправить заявку. Попробуйте ещё раз.');
+    }
   });
 }
+
