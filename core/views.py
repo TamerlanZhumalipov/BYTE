@@ -125,12 +125,14 @@ def dashboard(request, slug=None):
         prev_section = flat[index - 1] if index > 0 else None
         next_section = flat[index + 1] if index < len(flat) - 1 else None
 
-    ai_history = []
-    if current:
-        ai_history = [
-            {"role": m.role, "content": m.content}
-            for m in AIMessage.objects.filter(user=request.user, section=current, archived=False)
-        ]
+    ai_history = [
+        {"role": m.role, "content": m.content}
+        for m in AIMessage.objects.filter(
+            user=request.user,
+            section=current if current else None,
+            archived=False,
+        )
+    ]
 
     return render(request, "dashboard.html", {
         "active_tab": "materials",
@@ -346,6 +348,76 @@ def _section_path_titles(section):
     return titles
 
 
+def _ai_request_message(request):
+    try:
+        data = json.loads(request.body)
+        message = (data.get("message") or "").strip()
+    except (ValueError, TypeError, AttributeError):
+        return None, JsonResponse({"error": "Некорректный запрос."}, status=400)
+
+    if not message:
+        return None, JsonResponse({"error": "Введите вопрос."}, status=400)
+    if len(message) > 2000:
+        return None, JsonResponse({"error": "Слишком длинное сообщение (максимум 2000 символов)."}, status=400)
+    return message, None
+
+
+def _ai_rate_limit(request):
+    now = timezone.now()
+    last = AIMessage.objects.filter(user=request.user, role="user").order_by("-created_at").first()
+    if last and (now - last.created_at).total_seconds() < settings.AI_COOLDOWN_SECONDS:
+        return JsonResponse({"error": "Слишком часто — подождите пару секунд."}, status=429)
+
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    used_today = AIMessage.objects.filter(
+        user=request.user, role="user", created_at__gte=today_start
+    ).count()
+    if used_today >= settings.AI_DAILY_LIMIT:
+        return JsonResponse({"error": "Дневной лимит вопросов помощнику исчерпан. Попробуйте завтра."}, status=429)
+    return None
+
+
+@login_required
+@require_POST
+def ai_ask_home(request):
+    if not ai_module.is_configured():
+        return JsonResponse({"error": "BYTE AI сейчас недоступен. Проверьте GEMINI_API_KEY."}, status=503)
+
+    message, error = _ai_request_message(request)
+    if error:
+        return error
+    limited = _ai_rate_limit(request)
+    if limited:
+        return limited
+
+    history_qs = (
+        AIMessage.objects.filter(user=request.user, section=None, archived=False)
+        .order_by("-created_at")[: settings.AI_HISTORY_MESSAGES]
+    )
+    history = [{"role": m.role, "content": m.content} for m in reversed(history_qs)]
+    AIMessage.objects.create(user=request.user, section=None, role="user", content=message)
+
+    try:
+        answer = ai_module.ask(None, [], history, message)
+    except Exception:
+        logger.exception("Ошибка BYTE AI на главной кабинета")
+        return JsonResponse({"error": "Не получилось получить ответ. Попробуйте ещё раз чуть позже."}, status=502)
+
+    reply = AIMessage.objects.create(
+        user=request.user, section=None, role="assistant", content=answer
+    )
+    return JsonResponse({"content": reply.content})
+
+
+@login_required
+@require_POST
+def ai_reset_home(request):
+    AIMessage.objects.filter(
+        user=request.user, section=None, archived=False
+    ).update(archived=True)
+    return JsonResponse({"ok": True})
+
+
 @login_required
 @require_POST
 def ai_ask(request, slug):
@@ -356,26 +428,12 @@ def ai_ask(request, slug):
     if section is None:
         raise Http404("Раздел не найден")
 
-    try:
-        data = json.loads(request.body)
-        message = (data.get("message") or "").strip()
-    except (ValueError, TypeError, AttributeError):
-        return JsonResponse({"error": "Некорректный запрос."}, status=400)
-
-    if not message:
-        return JsonResponse({"error": "Введите вопрос."}, status=400)
-    if len(message) > 2000:
-        return JsonResponse({"error": "Слишком длинное сообщение (максимум 2000 символов)."}, status=400)
-
-    now = timezone.now()
-    last = AIMessage.objects.filter(user=request.user, role="user").order_by("-created_at").first()
-    if last and (now - last.created_at).total_seconds() < settings.AI_COOLDOWN_SECONDS:
-        return JsonResponse({"error": "Слишком часто — подождите пару секунд."}, status=429)
-
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    used_today = AIMessage.objects.filter(user=request.user, role="user", created_at__gte=today_start).count()
-    if used_today >= settings.AI_DAILY_LIMIT:
-        return JsonResponse({"error": "Дневной лимит вопросов помощнику исчерпан. Попробуйте завтра."}, status=429)
+    message, error = _ai_request_message(request)
+    if error:
+        return error
+    limited = _ai_rate_limit(request)
+    if limited:
+        return limited
 
     history_qs = (
         AIMessage.objects.filter(user=request.user, section=section, archived=False)
