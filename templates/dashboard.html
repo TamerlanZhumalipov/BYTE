@@ -132,7 +132,7 @@
       <textarea id="ai-input" placeholder="{% if current %}Спросите про этот материал…{% else %}Спросите BYTE AI…{% endif %}" rows="1" maxlength="2000" required></textarea>
       <button class="btn btn-primary btn-sm ai-send" type="submit" aria-label="Отправить">↑</button>
     </form>
-    <p class="ai-hint">BYTE AI учитывает контекст страницы и историю диалога. Важные ответы лучше перепроверять.</p>
+    <p class="ai-hint">История хранится только в текущей вкладке и сбросится после её закрытия. Важные ответы лучше перепроверять.</p>
   </div>
 </div>
 {% endif %}
@@ -140,5 +140,5 @@
 
 {% block scripts %}
 <script src="{% static 'js/dashboard.js' %}"></script>
-{% if ai_enabled %}<script src="{% static 'js/ai.js' %}?v=20261005-ai3"></script>{% endif %}
+{% if ai_enabled %}<script src="{% static 'js/ai.js' %}?v=20261005-ai5"></script>{% endif %}
 {% endblock %}
