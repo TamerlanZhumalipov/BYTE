@@ -58,15 +58,14 @@
       {% if ai_enabled %}
       <div class="ai" id="ai" data-ask-url="{% url 'ai_ask' current.slug %}" data-reset-url="{% url 'ai_reset' current.slug %}">
         <button class="ai-fab" id="ai-fab" type="button" aria-expanded="false" aria-controls="ai-panel">
-          <span class="ai-fab-icon" aria-hidden="true">✦</span>
-          <span>Спросить помощника</span>
+          <span class="ai-fab-icon ai-star" aria-hidden="true">✦</span>
+          <span class="ai-fab-copy"><strong>BYTE AI</strong><small>Спросить помощника</small></span>
         </button>
 
         <div class="ai-panel" id="ai-panel" hidden>
           <div class="ai-panel-head">
             <div>
-              <strong>Помощник по разделу</strong>
-              <span>{{ current.title }}</span>
+              <div class="ai-headline"><span class="ai-head-icon" aria-hidden="true">✦</span><div><strong>BYTE AI</strong><span>Контекст: {{ current.title }}</span></div></div>
             </div>
             <div class="ai-panel-actions">
               <button class="btn btn-ghost btn-sm" id="ai-reset" type="button" title="Начать новый диалог">Новый диалог</button>
@@ -77,7 +76,7 @@
           <div class="ai-messages" id="ai-messages" aria-live="polite">
             {% if not ai_history %}
             <div class="ai-msg ai-msg-assistant">
-              <div class="ai-bubble">Привет! Я помощник по этому разделу — спрашивайте, если что-то непонятно в теории или примерах.</div>
+              <div class="ai-bubble">Сәлем! Я BYTE AI. Объясню текущую тему простыми словами, помогу с кодом и дам подсказку по задаче.</div>
             </div>
             {% endif %}
             {% for m in ai_history %}
@@ -88,10 +87,10 @@
           </div>
 
           <form class="ai-form" id="ai-form">
-            <textarea id="ai-input" placeholder="Спросите про этот раздел…" rows="1" maxlength="2000" required></textarea>
-            <button class="btn btn-primary btn-sm" type="submit">Спросить</button>
+            <textarea id="ai-input" placeholder="Спросите BYTE AI про этот раздел…" rows="1" maxlength="2000" required></textarea>
+            <button class="btn btn-primary btn-sm ai-send" type="submit" aria-label="Отправить">↑</button>
           </form>
-          <p class="ai-hint">Помощник опирается на текст этого раздела. Не заменяет куратора — про формат ЕНТ и оценки уточняйте у него.</p>
+          <p class="ai-hint">BYTE AI учитывает открытый материал и историю диалога. Важные ответы лучше перепроверять.</p>
         </div>
       </div>
       {% endif %}
