@@ -208,6 +208,15 @@ def dashboard(request, slug=None):
         if root_index < len(roots) - 1:
             next_root = roots[root_index + 1]
 
+    # После последнего урока внутри основной темы следующий шаг — проверочный тест,
+    # а не следующая основная тема.
+    next_is_quiz = False
+    if current and current_root and current_quiz:
+        topic_sections = _flatten([current_root])
+        if topic_sections and current.id == topic_sections[-1].id:
+            next_section = None
+            next_is_quiz = True
+
     # История BYTE AI хранится только в sessionStorage браузера.
     # После закрытия вкладки/браузера новый чат начинается с нуля.
     ai_history = []
@@ -226,6 +235,7 @@ def dashboard(request, slug=None):
         "current_best_score": current_best_score,
         "current_topic_completed": current_topic_completed,
         "next_root": next_root,
+        "next_is_quiz": next_is_quiz,
         "ai_enabled": ai_module.is_configured(),
         "ai_history": ai_history,
     })
