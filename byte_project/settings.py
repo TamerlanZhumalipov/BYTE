@@ -78,6 +78,9 @@ LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"
 LOGOUT_REDIRECT_URL = "index"
 
+# YouTube embeds require an HTTP Referer. Keep the origin on cross-site iframe requests.
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+
 # ---------------------------------------------------------------------------
 # ИИ-помощник по материалам (core/ai.py)
 # ---------------------------------------------------------------------------
