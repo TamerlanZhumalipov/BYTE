@@ -88,7 +88,7 @@ def _flatten(nodes):
     result = []
     for node in nodes:
         result.append(node)
-        result.extend(_flatten(node.kids))
+        result.extend(_flatten(getattr(node, "kids", [])))
     return result
 
 
@@ -101,10 +101,19 @@ def _upcoming_contest():
     return None
 
 
-def _root_topic(section):
+def _root_topic(section, by_id=None):
+    """Возвращает корневую тему.
+
+    Если передан by_id из _build_tree(), используем те же экземпляры Section,
+    на которых уже есть динамический атрибут .kids. Это важно для навигации
+    по урокам и определения последней подтемы.
+    """
     node = section
-    while node.parent_id:
-        node = node.parent
+    while node and node.parent_id:
+        if by_id and node.parent_id in by_id:
+            node = by_id[node.parent_id]
+        else:
+            node = node.parent
     return node
 
 
@@ -197,7 +206,7 @@ def dashboard(request, slug=None):
         if next_section is not None and getattr(next_section, "is_locked", False):
             next_section = None
 
-    current_root = _root_topic(current) if current else None
+    current_root = _root_topic(current, by_id) if current else None
     current_quiz = learning["quizzes"].get(current_root.id) if current_root else None
     current_best_score = learning["best_by_topic"].get(current_root.id) if current_root else None
     current_topic_completed = bool(current_root and current_root.id in learning["passed_topics"])
