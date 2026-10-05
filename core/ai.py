@@ -51,10 +51,20 @@ def plain_text(html):
     return text.strip()
 
 
-def build_system_prompt(section, path_titles):
+def build_system_prompt(section=None, path_titles=None):
+    if section is None:
+        return (
+            f"{SYSTEM_PROMPT}\n\n"
+            "--- Контекст ---\n"
+            "Ученик находится на главной странице личного кабинета BYTE. "
+            "Помоги выбрать тему, составить план подготовки, объяснить информатику, "
+            "разобрать код или подготовиться к ЕНТ."
+        )
+
     body = plain_text(section.content)[:MAX_CONTEXT_CHARS]
     if not body:
         body = "(Текст этого раздела пока не добавлен. Опирайся на общие знания по теме и скажи об этом ученику.)"
+    path_titles = path_titles or [section.title]
     return (
         f"{SYSTEM_PROMPT}\n\n"
         f"--- Раздел, который сейчас читает ученик ---\n"
