@@ -3,7 +3,7 @@
 
 html{scroll-behavior:smooth}
 body{animation:byte-page-in .48s var(--motion-ease) both}
-@keyframes byte-page-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes byte-page-in{from{opacity:0}to{opacity:1}}
 
 a,button,input,select,textarea,.btn,.theme-button,.app-tab,.tree-link,.tree-summary,.topic-card,.track-card,.format-card,.faq-item,.pricing-cell,.leaderboard,.contest-banner,.code-panel,.child-link,.doc-nav a,.cx-tab,.cx-result,.ai-fab,.ai-panel{
   transition:
