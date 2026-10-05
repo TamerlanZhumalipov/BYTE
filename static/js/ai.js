@@ -1,4 +1,4 @@
-// BYTE AI — floating assistant
+// BYTE AI — floating assistant with session-only history
 (() => {
   'use strict';
 
@@ -7,14 +7,13 @@
     if (!root || root.dataset.ready === '1') return;
     root.dataset.ready = '1';
 
-    // Move the assistant to <body> so no dashboard/grid/animation container
-    // can change the containing block of position: fixed.
     if (root.parentElement !== document.body) document.body.appendChild(root);
 
     const csrfMeta = document.querySelector('meta[name="csrf-token"]');
     const csrf = csrfMeta ? csrfMeta.content : '';
     const askUrl = root.dataset.askUrl;
     const resetUrl = root.dataset.resetUrl;
+    const storageKey = `byte-ai-session:${askUrl}`;
 
     const fab = root.querySelector('#ai-fab');
     const panel = root.querySelector('#ai-panel');
@@ -28,6 +27,32 @@
     if (!fab || !panel || !messagesEl || !form || !input || !submitBtn) {
       console.error('BYTE AI: interface elements are missing');
       return;
+    }
+
+    const greeting =
+      messagesEl.querySelector('.ai-msg-assistant .ai-bubble')?.textContent?.trim() ||
+      'Сәлем! Я BYTE AI. Чем могу помочь?';
+
+    function loadHistory() {
+      try {
+        const parsed = JSON.parse(sessionStorage.getItem(storageKey) || '[]');
+        if (!Array.isArray(parsed)) return [];
+        return parsed
+          .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+          .slice(-16);
+      } catch {
+        return [];
+      }
+    }
+
+    let sessionHistory = loadHistory();
+
+    function saveHistory() {
+      try {
+        sessionStorage.setItem(storageKey, JSON.stringify(sessionHistory.slice(-16)));
+      } catch {
+        // Chat still works if sessionStorage is unavailable.
+      }
     }
 
     function openPanel() {
@@ -68,21 +93,69 @@
       input.style.height = Math.min(input.scrollHeight, 140) + 'px';
     });
 
-    function addMessage(role, text) {
+    function createBubble(role) {
       const wrap = document.createElement('div');
       wrap.className = `ai-msg ai-msg-${role}`;
       const bubble = document.createElement('div');
       bubble.className = 'ai-bubble';
-      bubble.textContent = text;
       wrap.appendChild(bubble);
       messagesEl.appendChild(wrap);
       messagesEl.scrollTop = messagesEl.scrollHeight;
       return bubble;
     }
 
+    function addMessage(role, text) {
+      const bubble = createBubble(role);
+      bubble.textContent = text;
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return bubble;
+    }
+
+    function typeAssistantMessage(text) {
+      const bubble = createBubble('assistant');
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (reduceMotion || !text) {
+        bubble.textContent = text;
+        return Promise.resolve();
+      }
+
+      return new Promise((resolve) => {
+        const speed = 95; // characters per second
+        const started = performance.now();
+        let shown = 0;
+
+        function frame(now) {
+          const target = Math.min(text.length, Math.floor(((now - started) / 1000) * speed));
+          if (target > shown) {
+            bubble.textContent = text.slice(0, target);
+            shown = target;
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+          }
+
+          if (shown < text.length) {
+            requestAnimationFrame(frame);
+          } else {
+            bubble.textContent = text;
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+            resolve();
+          }
+        }
+
+        requestAnimationFrame(frame);
+      });
+    }
+
+    function renderSessionHistory() {
+      if (!sessionHistory.length) return;
+      messagesEl.innerHTML = '';
+      sessionHistory.forEach((message) => addMessage(message.role, message.content));
+    }
+
+    renderSessionHistory();
+
     function addTyping() {
-      const existing = root.querySelector('#ai-typing');
-      if (existing) existing.remove();
+      root.querySelector('#ai-typing')?.remove();
       const wrap = document.createElement('div');
       wrap.className = 'ai-msg ai-msg-assistant';
       wrap.id = 'ai-typing';
@@ -100,7 +173,12 @@
       const text = input.value.trim();
       if (!text || submitBtn.disabled) return;
 
+      const priorHistory = sessionHistory.slice(-8);
+
       addMessage('user', text);
+      sessionHistory.push({ role: 'user', content: text });
+      saveHistory();
+
       input.value = '';
       input.style.height = 'auto';
       submitBtn.disabled = true;
@@ -115,8 +193,12 @@
             'X-CSRFToken': csrf,
             'X-Requested-With': 'XMLHttpRequest',
           },
-          body: JSON.stringify({ message: text }),
+          body: JSON.stringify({
+            message: text,
+            history: priorHistory,
+          }),
         });
+
         const body = await response.json().catch(() => ({}));
         removeTyping();
 
@@ -124,7 +206,11 @@
           addMessage('assistant', body.error || 'Не получилось получить ответ. Попробуйте ещё раз.');
           return;
         }
-        addMessage('assistant', body.content || 'Ответ пуст. Попробуйте переформулировать вопрос.');
+
+        const answer = body.content || 'Ответ пуст. Попробуйте переформулировать вопрос.';
+        await typeAssistantMessage(answer);
+        sessionHistory.push({ role: 'assistant', content: answer });
+        saveHistory();
       } catch (error) {
         removeTyping();
         addMessage('assistant', 'Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.');
@@ -143,21 +229,25 @@
 
     resetBtn?.addEventListener('click', async () => {
       if (!window.confirm('Начать новый диалог?')) return;
-      resetBtn.disabled = true;
+
+      sessionHistory = [];
       try {
-        const response = await fetch(resetUrl, {
+        sessionStorage.removeItem(storageKey);
+      } catch {}
+
+      messagesEl.innerHTML = '';
+      addMessage('assistant', greeting);
+
+      // Server-side log reset is best-effort; UI/session reset does not depend on it.
+      try {
+        await fetch(resetUrl, {
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' },
         });
-        if (!response.ok) throw new Error('reset failed');
-        messagesEl.innerHTML = '';
-        addMessage('assistant', 'Начали новый диалог. Спрашивайте!');
-      } catch (error) {
-        addMessage('assistant', 'Не удалось начать новый диалог. Попробуйте ещё раз.');
-      } finally {
-        resetBtn.disabled = false;
-      }
+      } catch {}
+
+      input.focus();
     });
   }
 
