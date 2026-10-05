@@ -72,7 +72,10 @@ def ask(section, path_titles, history, message):
     from google import genai
     from google.genai import types
 
-    client = genai.Client()   # ключ берётся из переменной окружения GEMINI_API_KEY
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY is not configured")
+    client = genai.Client(api_key=api_key)
 
     contents = [
         types.Content(
