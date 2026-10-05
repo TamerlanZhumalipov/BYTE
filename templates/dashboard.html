@@ -15,34 +15,95 @@
   <main class="dash-main">
     <button class="btn btn-ghost btn-sm side-toggle" type="button" data-side-toggle aria-expanded="false" aria-controls="dash-side">☰ Разделы</button>
 
+    {% if messages %}
+    <div class="app-messages">
+      {% for message in messages %}
+      <div class="app-message app-message-{{ message.tags|default:'info' }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
     {% if current %}
       <nav class="crumbs" aria-label="Путь">
         <a href="{% url 'dashboard' %}">Материалы</a>
         {% for a in breadcrumbs %}<span aria-hidden="true">/</span><a href="{{ a.get_absolute_url }}">{{ a.title }}</a>{% endfor %}
+        {% if current.parent_id %}<span aria-hidden="true">/</span><span>{{ current.title }}</span>{% endif %}
       </nav>
 
       <article class="doc">
-        <h1>{{ current.title }}</h1>
+        <div class="lesson-heading">
+          <div>
+            <span class="lesson-kicker">{% if current.parent_id %}урок{% else %}основная тема{% endif %}</span>
+            <h1>{{ current.title }}</h1>
+          </div>
+          {% if current_topic_completed %}
+          <span class="status-pill status-done">✓ тема пройдена</span>
+          {% endif %}
+        </div>
         {% if current.summary %}<p class="doc-lead">{{ current.summary }}</p>{% endif %}
 
+        {% if current.video_url %}
+        <section class="lesson-block lesson-video-block" aria-label="Видео урока">
+          <div class="lesson-block-head">
+            <div><span class="lesson-format">01 · видео</span><h2>Видеоразбор</h2></div>
+            <a class="video-external" href="{{ current.video_url }}" target="_blank" rel="noopener">Открыть отдельно ↗</a>
+          </div>
+          <div class="video-frame">
+            <iframe src="{{ current.video_embed_url }}" title="Видео: {{ current.title }}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+          </div>
+        </section>
+        {% endif %}
+
         {% if current.content %}
+        <section class="lesson-block lesson-text-block">
+          <div class="lesson-block-head">
+            <div><span class="lesson-format">{% if current.video_url %}02{% else %}01{% endif %} · конспект</span><h2>Материал урока</h2></div>
+          </div>
           <div class="doc-body">{{ current.content|safe }}</div>
-        {% elif not current.kids %}
-          <p class="doc-empty">Материал по этому разделу скоро появится.</p>
+        </section>
+        {% elif not current.kids and not current.video_url %}
+          <p class="doc-empty">Материал по этому уроку скоро появится.</p>
         {% endif %}
 
         {% if current.kids %}
           <div class="doc-children">
-            <h2>В этом разделе</h2>
+            <div class="lesson-block-head">
+              <div><span class="lesson-format">уроки темы</span><h2>Что нужно пройти</h2></div>
+            </div>
             <ul class="child-list">
               {% for k in current.kids %}
               <li><a class="child-link" href="{{ k.get_absolute_url }}">
-                <strong>{{ k.title }}</strong>
-                {% if k.summary %}<span>{{ k.summary }}</span>{% endif %}
+                <span class="child-order">{{ forloop.counter|stringformat:"02d" }}</span>
+                <span class="child-copy">
+                  <strong>{{ k.title }}</strong>
+                  {% if k.summary %}<span>{{ k.summary }}</span>{% endif %}
+                  <small>{% if k.video_url %}Видео + текст{% else %}Текстовый урок{% endif %}</small>
+                </span>
+                <span class="child-arrow">→</span>
               </a></li>
               {% endfor %}
             </ul>
           </div>
+        {% endif %}
+
+        {% if current_root and current.id == current_root.id %}
+        <section class="topic-checkpoint">
+          <div>
+            <span class="lesson-format">закрепление темы</span>
+            <h2>Проверочный тест</h2>
+            {% if current_quiz %}
+              <p>Чтобы открыть следующую основную тему, нужно набрать минимум {{ current_quiz.pass_percent }}%.</p>
+              {% if current_best_score is not None %}<span class="checkpoint-score">Лучший результат: {{ current_best_score }}%</span>{% endif %}
+            {% else %}
+              <p>Тест для этой темы пока настраивается преподавателем.</p>
+            {% endif %}
+          </div>
+          {% if current_quiz %}
+          <a class="btn btn-primary" href="{% url 'topic_quiz' current_root.slug %}">
+            {% if current_topic_completed %}Пройти ещё раз{% else %}Начать тест{% endif %}
+          </a>
+          {% endif %}
+        </section>
         {% endif %}
 
         <div class="doc-nav">
@@ -59,7 +120,7 @@
       <div class="welcome">
         <span class="kicker">кабинет ученика</span>
         <h1>Привет, {{ user.first_name|default:user.get_username }}</h1>
-        <p>Выберите тему ЕНТ — в каждой есть подразделы с теорией и примерами. Навигация по темам всегда слева.</p>
+        <p>Темы открываются последовательно: завершите текущую тему и пройдите её тест, чтобы открыть следующую.</p>
 
         {% if next_contest %}
         <div class="contest-banner">
@@ -72,14 +133,29 @@
         {% endif %}
 
         {% if roots %}
-        <div class="topic-grid">
+        <div class="topic-grid learning-path-grid">
           {% for s in roots %}
-          <a class="topic-card" href="{{ s.get_absolute_url }}">
-            <span class="tree-num">{{ forloop.counter|stringformat:"02d" }}</span>
+          {% if s.is_locked %}
+          <div class="topic-card topic-card-locked" aria-disabled="true">
+            <div class="topic-card-top"><span class="tree-num">{{ forloop.counter|stringformat:"02d" }}</span><span class="status-pill status-locked">🔒 закрыто</span></div>
             <h3>{{ s.title }}</h3>
             {% if s.summary %}<p>{{ s.summary }}</p>{% endif %}
-            <span class="topic-meta">подразделов: {{ s.kids|length }}</span>
+            <span class="topic-meta">Откроется после предыдущей темы</span>
+          </div>
+          {% else %}
+          <a class="topic-card{% if s.is_completed %} topic-card-done{% endif %}" href="{{ s.get_absolute_url }}">
+            <div class="topic-card-top">
+              <span class="tree-num">{{ forloop.counter|stringformat:"02d" }}</span>
+              {% if s.is_completed %}<span class="status-pill status-done">✓ пройдено</span>{% else %}<span class="status-pill status-open">доступно</span>{% endif %}
+            </div>
+            <h3>{{ s.title }}</h3>
+            {% if s.summary %}<p>{{ s.summary }}</p>{% endif %}
+            <div class="topic-meta-row">
+              <span>уроков: {{ s.kids|length }}</span>
+              {% if s.best_score is not None %}<span>лучший тест: {{ s.best_score }}%</span>{% endif %}
+            </div>
           </a>
+          {% endif %}
           {% endfor %}
         </div>
         {% else %}
