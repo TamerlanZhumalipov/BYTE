@@ -1,0 +1,106 @@
+{% extends "app_base.html" %}
+{% load static %}
+
+{% block title %}Тест · {{ topic.title }}{% endblock %}
+
+{% block body %}
+<main class="quiz-page">
+  <div class="quiz-shell">
+    <nav class="crumbs">
+      <a href="{% url 'dashboard' %}">Материалы</a>
+      <span>/</span>
+      <a href="{{ topic.get_absolute_url }}">{{ topic.title }}</a>
+      <span>/</span>
+      <span>Проверочный тест</span>
+    </nav>
+
+    {% if messages %}
+    <div class="app-messages">
+      {% for message in messages %}<div class="app-message app-message-{{ message.tags|default:'info' }}">{{ message }}</div>{% endfor %}
+    </div>
+    {% endif %}
+
+    <header class="quiz-hero">
+      <div>
+        <span class="kicker">закрепление основной темы</span>
+        <h1>{{ topic.title }}</h1>
+        <p>Проходной результат — {{ quiz.pass_percent }}%. После успешной попытки откроется следующая основная тема.</p>
+      </div>
+      {% if best_score is not None %}
+      <div class="quiz-best"><span>лучший результат</span><strong>{{ best_score }}%</strong></div>
+      {% endif %}
+    </header>
+
+    {% if result %}
+    <section class="quiz-result {% if result.passed %}is-passed{% else %}is-failed{% endif %}">
+      <div class="quiz-result-score">
+        <span>{% if result.passed %}Тема пройдена{% else %}Нужно повторить{% endif %}</span>
+        <strong>{{ result.score }}%</strong>
+        <small>{{ result.correct_count }} из {{ result.total }} правильных</small>
+      </div>
+      <div class="quiz-result-copy">
+        {% if result.passed %}
+        <h2>Отлично, следующая тема открыта</h2>
+        <p>Результат сохранён в аналитике. Можно продолжать обучение или пройти тест ещё раз, чтобы улучшить процент.</p>
+        <div class="quiz-actions">
+          {% if result.unlocked_next %}<a class="btn btn-primary" href="{{ result.unlocked_next.get_absolute_url }}">Перейти к следующей теме →</a>{% endif %}
+          <a class="btn btn-ghost" href="{% url 'analytics' %}">Посмотреть аналитику</a>
+        </div>
+        {% else %}
+        <h2>До проходного результата не хватило</h2>
+        <p>Вернитесь к материалу, разберите ошибки и попробуйте ещё раз. Следующая тема останется закрытой до успешной попытки.</p>
+        <div class="quiz-actions">
+          <a class="btn btn-primary" href="{{ topic.get_absolute_url }}">Повторить материал</a>
+          <a class="btn btn-ghost" href="{% url 'topic_quiz' topic.slug %}">Пройти тест снова</a>
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="quiz-review">
+      <div class="section-head compact"><h2>Разбор попытки</h2><p>Смотрите, где ответили верно и что стоит повторить.</p></div>
+      <div class="quiz-review-list">
+        {% for item in result.review %}
+        <article class="review-card {% if item.is_correct %}is-correct{% else %}is-wrong{% endif %}">
+          <div class="review-number">{{ forloop.counter|stringformat:"02d" }}</div>
+          <div>
+            <h3>{{ item.question.text }}</h3>
+            <p><strong>Ваш ответ:</strong> {% if item.selected %}{{ item.selected.text }}{% else %}не выбран{% endif %}</p>
+            {% if not item.is_correct and item.correct_choice %}<p class="correct-answer"><strong>Правильный ответ:</strong> {{ item.correct_choice.text }}</p>{% endif %}
+          </div>
+          <span class="review-mark">{% if item.is_correct %}✓{% else %}×{% endif %}</span>
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    {% else %}
+      {% if questions %}
+      <form method="post" class="quiz-form">
+        {% csrf_token %}
+        {% for question in questions %}
+        <fieldset class="quiz-question">
+          <legend><span>{{ forloop.counter|stringformat:"02d" }}</span>{{ question.text }}</legend>
+          <div class="quiz-options">
+            {% for choice in question.choices.all %}
+            <label class="quiz-option">
+              <input type="radio" name="q_{{ question.id }}" value="{{ choice.id }}" required>
+              <span class="quiz-radio"></span>
+              <span>{{ choice.text }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+        {% endfor %}
+        <div class="quiz-submit-bar">
+          <div><strong>{{ questions|length }} вопросов</strong><span>Результат появится сразу после отправки.</span></div>
+          <button class="btn btn-primary" type="submit">Завершить тест</button>
+        </div>
+      </form>
+      {% else %}
+      <div class="doc-empty">Вопросы для этого теста пока не добавлены.</div>
+      {% endif %}
+    {% endif %}
+  </div>
+</main>
+{% endblock %}
