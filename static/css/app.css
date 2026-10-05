@@ -896,3 +896,45 @@ html.light-theme .ai-fab{background:rgba(255,255,255,.92);box-shadow:0 16px 38px
 html.light-theme .ai-panel-head{background:linear-gradient(120deg,#fff,#eef8ff,#f3f0ff)}
 html.light-theme .ai-messages{background:#f6fbfe}
 @media(max-width:560px){.ai-fab{min-width:0;width:58px;height:58px;padding:8px;border-radius:18px}.ai-fab-copy{display:none}.ai-star{width:40px;height:40px}.ai-panel{left:10px;right:10px;width:auto}}
+
+
+/* BYTE AI — viewport-fixed layer (must stay outside dashboard flow) */
+.ai{
+  position:fixed!important;
+  right:24px!important;
+  bottom:24px!important;
+  left:auto!important;
+  top:auto!important;
+  width:auto!important;
+  height:auto!important;
+  z-index:1000!important;
+  pointer-events:none;
+}
+.ai-fab{
+  position:relative!important;
+  right:auto!important;
+  bottom:auto!important;
+  z-index:1001!important;
+  pointer-events:auto;
+}
+.ai-panel{
+  position:fixed!important;
+  right:24px!important;
+  bottom:94px!important;
+  left:auto!important;
+  top:auto!important;
+  z-index:1002!important;
+  pointer-events:auto;
+}
+.ai-panel[hidden]{display:none!important}
+
+@media(max-width:560px){
+  .ai{right:12px!important;bottom:12px!important}
+  .ai-panel{
+    right:10px!important;
+    left:10px!important;
+    bottom:82px!important;
+    width:auto!important;
+    max-height:calc(100dvh - 105px)!important;
+  }
+}
