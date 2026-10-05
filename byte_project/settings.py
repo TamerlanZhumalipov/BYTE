@@ -100,7 +100,7 @@ _load_dotenv()
 
 AI_ENABLED = os.environ.get("AI_ENABLED", "1") == "1"
 AI_MODEL = os.environ.get("AI_MODEL", "gemini-3.8-flash")
-AI_FALLBACK_MODELS = [m.strip() for m in os.environ.get("AI_FALLBACK_MODELS", "gemini-3.5-flash,gemini-3.1-flash-lite").split(",") if m.strip()]
+AI_FALLBACK_MODELS = [m.strip() for m in os.environ.get("AI_FALLBACK_MODELS", "gemini-3.5-flash-lite,gemini-3.5-flash,gemini-3.1-flash-lite").split(",") if m.strip()]
 AI_MAX_TOKENS = int(os.environ.get("AI_MAX_TOKENS", "700"))
 AI_HISTORY_MESSAGES = 8    # сколько последних реплик диалога передаём модели как контекст
 AI_COOLDOWN_SECONDS = 4    # минимальный промежуток между вопросами одного ученика
