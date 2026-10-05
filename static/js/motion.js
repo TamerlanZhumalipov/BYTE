@@ -13,13 +13,21 @@
       '.contest-banner',
       '.cx-top',
       '.cx-tabs',
-      '.cx-body'
+      '.cx-body',
+      '.lesson-block',
+      '.topic-checkpoint',
+      '.quiz-hero',
+      '.quiz-result',
+      '.quiz-question',
+      '.quiz-review',
+      '.analytics-head',
+      '.analytics-section'
     ];
     document.querySelectorAll(selectors.join(',')).forEach((el) => {
       if (!el.classList.contains('reveal')) el.classList.add('reveal');
     });
 
-    document.querySelectorAll('.tracks-grid,.format-grid,.topic-grid,.checklist,.faq-list,.hero-stats').forEach((el) => {
+    document.querySelectorAll('.tracks-grid,.format-grid,.topic-grid,.checklist,.faq-list,.hero-stats,.analytics-kpis,.attempt-grid').forEach((el) => {
       el.classList.add('stagger-children');
     });
   }
