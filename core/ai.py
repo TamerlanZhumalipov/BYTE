@@ -70,10 +70,10 @@ def build_system_prompt(section=None, path_titles=None):
             "разобрать код или подготовиться к ЕНТ."
         )
 
-    body = plain_text(section.content)[:MAX_CONTEXT_CHARS]
+    body = plain_text(getattr(section, "display_content", None) or section.content)[:MAX_CONTEXT_CHARS]
     if not body:
         body = "(Текст этого раздела пока не добавлен. Опирайся на общие знания по теме и скажи об этом ученику.)"
-    path_titles = path_titles or [section.title]
+    path_titles = path_titles or [getattr(section, "display_title", None) or section.title]
     return (
         f"{SYSTEM_PROMPT}\n\n"
         f"--- Раздел, который сейчас читает ученик ---\n"
