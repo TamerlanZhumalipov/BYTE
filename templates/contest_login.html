@@ -1,17 +1,17 @@
 {% extends "app_base.html" %}
-{% load static %}
+{% load static byte_i18n %}
 
-{% block title %}Вход в контест{% endblock %}
+{% block title %}{% bt "Вход в контест" %}{% endblock %}
 
 {% block body %}
 <main class="auth-main">
   <div class="auth-card">
-    <span class="kicker">лайв-контест</span>
-    <h1 class="auth-title" style="text-align:left; margin-top:0;">Вход в контест</h1>
-    <p class="auth-subtitle" style="text-align:left;">У контеста отдельные логин и пароль — не такие, как на сайте. Их выдаёт куратор.</p>
+    <span class="kicker">{% bt "лайв-контест" %}</span>
+    <h1 class="auth-title" style="text-align:left; margin-top:0;">{% bt "Вход в контест" %}</h1>
+    <p class="auth-subtitle" style="text-align:left;">{% bt "У контеста отдельные логин и пароль — не такие, как на сайте. Их выдаёт куратор." %}</p>
 
     {% if next_contest %}
-    <p class="contest-when">Ближайший контест: <strong>{{ next_contest.title }}</strong>, {{ next_contest.starts_at|date:"j E, H:i" }}</p>
+    <p class="contest-when">{% bt "Ближайший контест" %}: <strong>{{ next_contest.title }}</strong>, {{ next_contest.starts_at|date:"j E, H:i" }}</p>
     {% endif %}
 
     {% if error %}<div class="auth-error show">{{ error }}</div>{% endif %}
@@ -19,14 +19,14 @@
     <form method="post" action="{% url 'contest_login' %}">
       {% csrf_token %}
       <div class="field-group">
-        <label for="login">Логин контеста</label>
+        <label for="login">{% bt "Логин контеста" %}</label>
         <input type="text" id="login" name="login" autocomplete="off" autocapitalize="off" spellcheck="false" required autofocus>
       </div>
       <div class="field-group">
-        <label for="password">Пароль контеста</label>
+        <label for="password">{% bt "Пароль контеста" %}</label>
         <input type="password" id="password" name="password" autocomplete="off" required>
       </div>
-      <button class="btn btn-primary btn-block" type="submit">Войти в контест</button>
+      <button class="btn btn-primary btn-block" type="submit">{% bt "Войти в контест" %}</button>
     </form>
   </div>
 </main>
