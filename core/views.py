@@ -10,11 +10,13 @@ from django.http import Http404, JsonResponse
 from django.db import IntegrityError
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .forms import LeadForm
 from .judge import LANGUAGES, MAX_CODE_BYTES, run_submission
+from .localization import get_request_language, tr
 from .models import (
     AIMessage, Contest, ContestAccount, ContestTask, QuizAttempt, Section, Submission, TopicQuiz,
 )
@@ -32,6 +34,21 @@ SUBMIT_COOLDOWN_SEC = 10
 
 def index(request):
     return render(request, "index.html")
+
+
+@require_POST
+def set_language(request):
+    language = request.POST.get("language", "ru")
+    request.session["site_language"] = language if language in {"ru", "kk"} else "ru"
+
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or "/"
+    if not url_has_allowed_host_and_scheme(
+        url=next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        next_url = "/"
+    return redirect(next_url)
 
 
 @require_POST
