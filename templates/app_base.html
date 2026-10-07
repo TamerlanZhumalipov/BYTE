@@ -1,6 +1,6 @@
-{% load static %}
+{% load static byte_i18n %}
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="{{ site_lang }}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -19,8 +19,8 @@
 <body class="app-body">
 <header class="app-header"><div class="app-header-inner">
 <a class="brand" href="{% url 'index' %}"><img src="{% static 'img/logo.jpg' %}" alt="BYTE">BYTE</a>
-<nav class="app-tabs" aria-label="Разделы кабинета"><a class="app-tab{% if active_tab == 'materials' %} is-active{% endif %}" href="{% url 'dashboard' %}">Материалы</a><a class="app-tab{% if active_tab == 'analytics' %} is-active{% endif %}" href="{% url 'analytics' %}">Аналитика</a><a class="app-tab{% if active_tab == 'contest' %} is-active{% endif %}" href="{% url 'contest' %}">Лайв-контест</a></nav>
-<div class="app-user"><span class="app-user-name">{{ user.get_username }}</span><button class="theme-button" id="themeButton" type="button" aria-label="Включить светлую тему">☀</button><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn btn-ghost btn-sm" type="submit">Выйти</button></form></div>
+<nav class="app-tabs" aria-label="Разделы кабинета"><a class="app-tab{% if active_tab == 'materials' %} is-active{% endif %}" href="{% url 'dashboard' %}">{% bt "Материалы" %}</a><a class="app-tab{% if active_tab == 'analytics' %} is-active{% endif %}" href="{% url 'analytics' %}">{% bt "Аналитика" %}</a><a class="app-tab{% if active_tab == 'contest' %} is-active{% endif %}" href="{% url 'contest' %}">{% bt "Лайв-контест" %}</a></nav>
+<div class="app-user"><span class="app-user-name">{{ user.get_username }}</span><form class="lang-switch" method="post" action="{% url 'set_language' %}" aria-label="Language">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="lang-option{% if site_lang == 'ru' %} is-active{% endif %}" name="language" value="ru" type="submit">RU</button><button class="lang-option{% if site_lang == 'kk' %} is-active{% endif %}" name="language" value="kk" type="submit">KZ</button></form><button class="theme-button" id="themeButton" type="button" aria-label="{% bt 'Светлая тема' %}">☀</button><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn btn-ghost btn-sm" type="submit">{% bt "Выйти" %}</button></form></div>
 </div></header>
 {% block body %}{% endblock %}
 {% block floating_ui %}{% endblock %}
