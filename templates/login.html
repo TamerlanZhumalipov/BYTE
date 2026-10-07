@@ -1,10 +1,10 @@
-{% load static %}
+{% load static byte_i18n %}
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="{{ site_lang }}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Вход — BYTE</title>
+<title>{% bt "Войти" %} — BYTE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -14,50 +14,45 @@
 
 <header class="site-header">
   <div class="container">
-    <a class="brand" href="{% url 'index' %}">
-      <img src="{% static 'img/logo.jpg' %}" alt="BYTE">
-      BYTE
-    </a>
+    <a class="brand" href="{% url 'index' %}"><img src="{% static 'img/logo.jpg' %}" alt="BYTE">BYTE</a>
     <nav class="main-nav">
-      <a href="{% url 'index' %}#tracks">Языки</a>
-      <a href="{% url 'index' %}#pricing">Пакеты</a>
-      <a href="{% url 'index' %}#faq">Вопросы</a>
+      <a href="{% url 'index' %}#tracks">{% bt "Языки" %}</a>
+      <a href="{% url 'index' %}#pricing">{% bt "Пакеты" %}</a>
+      <a href="{% url 'index' %}#faq">{% bt "Вопросы" %}</a>
     </nav>
     <div class="header-actions">
-      <a class="btn btn-ghost" href="{% url 'index' %}#cta">Оставить заявку</a>
+      <form class="lang-switch" method="post" action="{% url 'set_language' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="lang-option{% if site_lang == 'ru' %} is-active{% endif %}" name="language" value="ru" type="submit">RU</button><button class="lang-option{% if site_lang == 'kk' %} is-active{% endif %}" name="language" value="kk" type="submit">KZ</button></form>
+      <a class="btn btn-ghost" href="{% url 'index' %}#cta">{% bt "Оставить заявку" %}</a>
     </div>
   </div>
 </header>
 
 <main class="auth-main">
   <div class="auth-card">
-    <div class="brand">
-      <img src="{% static 'img/logo.jpg' %}" alt="BYTE" style="height:36px;">
-    </div>
-    <h1 class="auth-title">С возвращением</h1>
-    <p class="auth-subtitle">Войдите, чтобы продолжить обучение и записаться на ближайший контест.</p>
+    <div class="brand"><img src="{% static 'img/logo.jpg' %}" alt="BYTE" style="height:36px;"></div>
+    <h1 class="auth-title">{% bt "С возвращением" %}</h1>
+    <p class="auth-subtitle">{% bt "Войдите, чтобы продолжить обучение и записаться на ближайший контест." %}</p>
 
     {% if form.errors %}
-    <div class="auth-error show">Неверный email/логин или пароль. Попробуйте ещё раз.</div>
+    <div class="auth-error show">{% bt "Неверный email/логин или пароль. Попробуйте ещё раз." %}</div>
     {% endif %}
 
     <form method="post" action="{% url 'login' %}">
       {% csrf_token %}
       <input type="hidden" name="next" value="{{ next }}">
       <div class="field-group">
-        <label for="username">Email или логин</label>
+        <label for="username">{% bt "Email или логин" %}</label>
         <input type="text" id="username" name="username" autocomplete="username" required>
       </div>
       <div class="field-group">
-        <label for="password">Пароль</label>
+        <label for="password">{% bt "Пароль" %}</label>
         <input type="password" id="password" name="password" autocomplete="current-password" required>
       </div>
-      <button class="btn btn-primary btn-block" type="submit">Войти</button>
+      <button class="btn btn-primary btn-block" type="submit">{% bt "Войти" %}</button>
     </form>
 
-    <div class="auth-divider">или</div>
-
-    <p class="auth-switch">Ещё нет доступа? Логин и пароль выдаёт куратор после оплаты — <a href="{% url 'index' %}#cta">оставьте заявку</a>.</p>
+    <div class="auth-divider">{% bt "или" %}</div>
+    <p class="auth-switch">{% if site_lang == "kk" %}Әлі қолжетімділік жоқ па? Логин мен құпиясөзді төлемнен кейін куратор береді — <a href="{% url 'index' %}#cta">өтінім қалдырыңыз</a>.{% else %}Ещё нет доступа? Логин и пароль выдаёт куратор после оплаты — <a href="{% url 'index' %}#cta">оставьте заявку</a>.{% endif %}</p>
   </div>
 </main>
 
