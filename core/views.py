@@ -53,6 +53,7 @@ def set_language(request):
 
 @require_POST
 def lead_create(request):
+    lang = get_request_language(request)
     # Принимаем как актуальное поле phone, так и старое contact,
     # чтобы форма не ломалась при кэше старого HTML/JS в браузере.
     data = request.POST.copy()
@@ -72,14 +73,14 @@ def lead_create(request):
     except IntegrityError:
         logger.exception("Не удалось сохранить заявку")
         return JsonResponse(
-            {"ok": False, "error": "Не удалось сохранить заявку. Попробуйте ещё раз."},
+            {"ok": False, "error": tr("Не удалось сохранить заявку. Попробуйте ещё раз.", lang)},
             status=500,
         )
 
     return JsonResponse({
         "ok": True,
         "lead_id": lead.pk,
-        "message": "Заявка принята. Мы свяжемся с вами в течение дня.",
+        "message": tr("Заявка принята. Мы свяжемся с вами в течение дня.", lang),
     })
 
 
@@ -655,11 +656,13 @@ def contest_submit(request):
 # ИИ-помощник по материалам
 # ---------------------------------------------------------------------------
 
-def _section_path_titles(section):
-    titles = [section.title]
+def _section_path_titles(section, lang="ru"):
+    title = (section.title_kk or section.title) if lang == "kk" else section.title
+    titles = [title]
     parent = section.parent
     while parent is not None:
-        titles.insert(0, parent.title)
+        parent_title = (parent.title_kk or parent.title) if lang == "kk" else parent.title
+        titles.insert(0, parent_title)
         parent = parent.parent
     return titles
 
@@ -761,6 +764,8 @@ def ai_ask(request, slug):
     section = Section.objects.filter(slug=slug, is_published=True).first()
     if section is None:
         raise Http404("Раздел не найден")
+    lang = get_request_language(request)
+    _localize_section(section, lang)
 
     message, history, error = _ai_request_payload(request)
     if error:
@@ -772,7 +777,7 @@ def ai_ask(request, slug):
     AIMessage.objects.create(user=request.user, section=section, role="user", content=message)
 
     try:
-        answer = ai_module.ask(section, _section_path_titles(section), history, message)
+        answer = ai_module.ask(section, _section_path_titles(section, lang), history, message)
     except ai_module.AIServiceError as exc:
         logger.exception("Ошибка ИИ-помощника")
         return JsonResponse({"error": exc.public_message, "code": exc.code}, status=502)
