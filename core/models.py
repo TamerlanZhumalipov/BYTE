@@ -355,3 +355,45 @@ class AIMessage(models.Model):
 
     def __str__(self):
         return f"{self.user} · {self.get_role_display()} · {self.content[:40]}"
+
+
+class ENTSpecification(models.Model):
+    year = models.PositiveSmallIntegerField("Год")
+    subject = models.SlugField("Предмет", default="informatics")
+    title = models.CharField("Название (RU)", max_length=200)
+    title_kk = models.CharField("Название (KZ)", max_length=200, blank=True)
+    source_url = models.URLField("Спецификация RU", blank=True)
+    source_url_kk = models.URLField("Спецификация KZ", blank=True)
+    question_count = models.PositiveSmallIntegerField(default=40)
+    max_score = models.PositiveSmallIntegerField(default=50)
+
+    class Meta:
+        ordering = ["-year", "subject"]
+        constraints = [models.UniqueConstraint(fields=["year", "subject"], name="ent_spec_year_subject_unique")]
+        verbose_name = "спецификация ЕНТ"
+        verbose_name_plural = "спецификации ЕНТ"
+
+    def __str__(self):
+        return f"{self.title} · {self.year}"
+
+
+class ENTTopic(models.Model):
+    specification = models.ForeignKey(ENTSpecification, on_delete=models.CASCADE, related_name="topics")
+    code = models.CharField("Код темы", max_length=2)
+    title = models.CharField("Название (RU)", max_length=300)
+    title_kk = models.CharField("Название (KZ)", max_length=300, blank=True)
+    sections = models.ManyToManyField(
+        Section, related_name="ent_topics", blank=True,
+        limit_choices_to={"parent__isnull": True}, verbose_name="Корневые темы BYTE",
+        help_text="Начальное сопоставление может покрывать только часть официальной темы.",
+    )
+    mapping_notes = models.TextField("Примечания к покрытию", blank=True)
+
+    class Meta:
+        ordering = ["specification", "code"]
+        constraints = [models.UniqueConstraint(fields=["specification", "code"], name="ent_topic_spec_code_unique")]
+        verbose_name = "тема ЕНТ"
+        verbose_name_plural = "темы ЕНТ"
+
+    def __str__(self):
+        return f"{self.code} · {self.title}"
