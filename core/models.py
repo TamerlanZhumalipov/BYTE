@@ -42,6 +42,7 @@ class Section(models.Model):
     Раздел с родителем — подраздел; вложенность может быть любой глубины.
     """
     title = models.CharField("Название", max_length=200)
+    title_kk = models.CharField("Название (қазақша)", max_length=200, blank=True)
     slug = models.SlugField("Адрес (латиницей)", max_length=120, unique=True)
     parent = models.ForeignKey(
         "self", verbose_name="Родительский раздел", null=True, blank=True,
@@ -50,14 +51,24 @@ class Section(models.Model):
     )
     order = models.PositiveIntegerField("Порядок", default=0)
     summary = models.CharField("Краткое описание", max_length=255, blank=True)
+    summary_kk = models.CharField("Қысқаша сипаттама (қазақша)", max_length=255, blank=True)
     content = models.TextField(
         "Содержимое (HTML)", blank=True,
         help_text="Можно использовать теги: h2, h3, p, ul, ol, table, pre, code, div class=\"note\".",
+    )
+    content_kk = models.TextField(
+        "Содержимое (қазақша, HTML)", blank=True,
+        help_text="Қазақ тіліндегі материал. Егер бос болса, орысша нұсқа көрсетіледі.",
     )
     video_url = models.URLField(
         "Видео урока",
         blank=True,
         help_text="Ссылка на YouTube/Vimeo или другой источник видео. Для YouTube ссылка автоматически превращается во встраиваемую.",
+    )
+    video_url_kk = models.URLField(
+        "Видео урока (қазақша)",
+        blank=True,
+        help_text="Қазақша видео сілтемесі. Егер бос болса, негізгі видео қолданылады.",
     )
     is_published = models.BooleanField("Показывать ученикам", default=True)
 
@@ -129,6 +140,7 @@ class QuizQuestion(models.Model):
     )
     order = models.PositiveSmallIntegerField("Порядок", default=1)
     text = models.TextField("Вопрос")
+    text_kk = models.TextField("Сұрақ (қазақша)", blank=True)
 
     class Meta:
         ordering = ["order", "id"]
@@ -147,6 +159,7 @@ class QuizChoice(models.Model):
         on_delete=models.CASCADE,
     )
     text = models.CharField("Вариант ответа", max_length=500)
+    text_kk = models.CharField("Жауап нұсқасы (қазақша)", max_length=500, blank=True)
     is_correct = models.BooleanField("Правильный ответ", default=False)
 
     class Meta:
