@@ -87,14 +87,23 @@ def lead_create(request):
 # Кабинет: материалы
 # ---------------------------------------------------------------------------
 
-def _build_tree():
-    """Все опубликованные разделы одним запросом, собранные в дерево.
+def _localize_section(section, lang):
+    """Добавляет display_* поля с fallback на русский."""
+    use_kk = lang == "kk"
+    section.display_title = (section.title_kk or section.title) if use_kk else section.title
+    section.display_summary = (section.summary_kk or section.summary) if use_kk else section.summary
+    section.display_content = (section.content_kk or section.content) if use_kk else section.content
+    section.display_video_url = (section.video_url_kk or section.video_url) if use_kk else section.video_url
+    section.display_video_embed_url = section.make_video_embed_url(section.display_video_url)
+    return section
 
-    Каждому разделу добавляется атрибут .kids — список его подразделов.
-    """
+
+def _build_tree(lang="ru"):
+    """Все опубликованные разделы одним запросом, собранные в дерево."""
     sections = list(Section.objects.filter(is_published=True))
     by_parent = {}
     for section in sections:
+        _localize_section(section, lang)
         by_parent.setdefault(section.parent_id, []).append(section)
     for section in sections:
         section.kids = by_parent.get(section.id, [])
@@ -189,7 +198,8 @@ def _decorate_learning_path(user, roots):
 
 @login_required
 def dashboard(request, slug=None):
-    roots, by_id = _build_tree()
+    lang = get_request_language(request)
+    roots, by_id = _build_tree(lang)
     flat = _flatten(roots)
     learning = _decorate_learning_path(request.user, roots)
 
@@ -205,7 +215,7 @@ def dashboard(request, slug=None):
         if getattr(current, "is_locked", False):
             messages.warning(
                 request,
-                "Эта тема пока закрыта. Сначала пройдите тест предыдущей основной темы.",
+                tr("Эта тема пока закрыта. Сначала пройдите тест предыдущей основной темы.", lang),
             )
             return redirect("dashboard")
 
@@ -273,26 +283,31 @@ def dashboard(request, slug=None):
 
 @login_required
 def topic_quiz(request, slug):
-    roots, _ = _build_tree()
+    lang = get_request_language(request)
+    roots, _ = _build_tree(lang)
     learning = _decorate_learning_path(request.user, roots)
     topic = next((root for root in roots if root.slug == slug), None)
     if topic is None:
         raise Http404("Основная тема не найдена")
     if topic.is_locked:
-        messages.warning(request, "Сначала завершите предыдущую основную тему.")
+        messages.warning(request, tr("Сначала завершите предыдущую основную тему.", lang))
         return redirect("dashboard")
 
     quiz = learning["quizzes"].get(topic.id)
     if quiz is None:
-        messages.info(request, "Проверочный тест для этой темы пока не добавлен.")
+        messages.info(request, tr("Проверочный тест для этой темы пока не добавлен.", lang))
         return redirect(topic.get_absolute_url())
 
     questions = list(quiz.questions.prefetch_related("choices").all())
+    for question in questions:
+        question.display_text = (question.text_kk or question.text) if lang == "kk" else question.text
+        for choice in question.choices.all():
+            choice.display_text = (choice.text_kk or choice.text) if lang == "kk" else choice.text
     result = None
 
     if request.method == "POST":
         if not questions:
-            messages.info(request, "В тесте пока нет вопросов.")
+            messages.info(request, tr("В тесте пока нет вопросов.", lang))
             return redirect(topic.get_absolute_url())
 
         correct_count = 0
@@ -405,7 +420,8 @@ def _analytics_forecast(roots):
 
 @login_required
 def analytics(request):
-    roots, _ = _build_tree()
+    lang = get_request_language(request)
+    roots, _ = _build_tree(lang)
     learning = _decorate_learning_path(request.user, roots)
 
     rows = []
@@ -429,6 +445,11 @@ def analytics(request):
     scored = [root.best_score for root in roots if root.best_score is not None]
     average_score = round(sum(scored) / len(scored)) if scored else None
     forecast_score, trend = _analytics_forecast(roots)
+    trend = tr(trend, lang)
+
+    recent_attempts = learning["attempts"][:6]
+    for attempt in recent_attempts:
+        _localize_section(attempt.quiz.topic, lang)
 
     return render(request, "analytics.html", {
         "active_tab": "analytics",
@@ -439,7 +460,7 @@ def analytics(request):
         "average_score": average_score,
         "forecast_score": forecast_score,
         "trend": trend,
-        "recent_attempts": learning["attempts"][:6],
+        "recent_attempts": recent_attempts,
     })
 
 
@@ -489,7 +510,7 @@ def contest_login(request):
         if account and account.check_password(password):
             request.session[CONTEST_SESSION_KEY] = account.pk
             return redirect("contest")
-        error = "Неверный логин или пароль контеста."
+        error = tr("Неверный логин или пароль контеста.", get_request_language(request))
 
     return render(request, "contest_login.html", {
         "active_tab": "contest",
