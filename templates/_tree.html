@@ -1,3 +1,4 @@
+{% load byte_i18n %}
 {# Рекурсивное дерево материалов. Состояние is_locked наследуется от основной темы. #}
 <ul class="tree-list{% if depth %} tree-sub{% endif %}">
 {% for s in nodes %}
@@ -5,23 +6,23 @@
   {% if s.is_locked %}
     <div class="tree-link is-locked" aria-disabled="true">
       {% if depth == 0 %}<span class="tree-num">{{ forloop.counter|stringformat:"02d" }}</span>{% endif %}
-      <span>{{ s.title }}</span>
-      {% if depth == 0 %}<span class="tree-state" title="Сначала завершите предыдущую тему">🔒</span>{% endif %}
+      <span>{{ s.display_title }}</span>
+      {% if depth == 0 %}<span class="tree-state" title="{% if site_lang == 'kk' %}Алдымен алдыңғы тақырыпты аяқтаңыз{% else %}Сначала завершите предыдущую тему{% endif %}">🔒</span>{% endif %}
     </div>
   {% elif s.kids %}
     <details class="tree-group"{% if s.id in open_ids %} open{% endif %}>
       <summary class="tree-summary">
         {% if depth == 0 %}<span class="tree-num">{{ forloop.counter|stringformat:"02d" }}</span>{% endif %}
-        <span>{{ s.title }}</span>
+        <span>{{ s.display_title }}</span>
         {% if depth == 0 and s.is_completed %}<span class="tree-state is-done">✓</span>{% endif %}
       </summary>
-      <a class="tree-link tree-overview{% if current and current.id == s.id %} is-current{% endif %}" href="{{ s.get_absolute_url }}">Обзор темы</a>
+      <a class="tree-link tree-overview{% if current and current.id == s.id %} is-current{% endif %}" href="{{ s.get_absolute_url }}">{% bt "Обзор темы" %}</a>
       {% include "_tree.html" with nodes=s.kids depth=depth|add:1 %}
     </details>
   {% else %}
     <a class="tree-link{% if current and current.id == s.id %} is-current{% endif %}" href="{{ s.get_absolute_url }}">
       {% if depth == 0 %}<span class="tree-num">{{ forloop.counter|stringformat:"02d" }}</span>{% endif %}
-      <span>{{ s.title }}</span>
+      <span>{{ s.display_title }}</span>
       {% if depth == 0 and s.is_completed %}<span class="tree-state is-done">✓</span>{% endif %}
     </a>
   {% endif %}
