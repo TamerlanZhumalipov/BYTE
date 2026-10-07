@@ -83,10 +83,10 @@ class Section(models.Model):
     def get_absolute_url(self):
         return reverse("section", args=[self.slug])
 
-    @property
-    def video_embed_url(self):
+    @staticmethod
+    def make_video_embed_url(url):
         """Возвращает ссылку, подходящую для iframe. YouTube нормализуется автоматически."""
-        url = (self.video_url or "").strip()
+        url = (url or "").strip()
         if not url:
             return ""
         try:
@@ -103,6 +103,10 @@ class Section(models.Model):
         except ValueError:
             return url
         return url
+
+    @property
+    def video_embed_url(self):
+        return self.make_video_embed_url(self.video_url)
 
 
 # ---------------------------------------------------------------------------
