@@ -30,7 +30,7 @@ class SectionAdmin(admin.ModelAdmin):
 class QuizQuestionInline(admin.StackedInline):
     model = QuizQuestion
     extra = 1
-    fields = ("order", "text")
+    fields = ("order", "text", "text_kk")
 
 
 @admin.register(TopicQuiz)
@@ -47,7 +47,7 @@ class TopicQuizAdmin(admin.ModelAdmin):
 class QuizChoiceInline(admin.TabularInline):
     model = QuizChoice
     extra = 4
-    fields = ("text", "is_correct")
+    fields = ("text", "text_kk", "is_correct")
 
 
 @admin.register(QuizQuestion)
