@@ -1,8 +1,10 @@
 from django.urls import path
 
 from . import views
+from .ent_views import ent_specification
 
 urlpatterns = [
+    path("api/ent/specifications/<int:year>/", ent_specification, name="ent_specification"),
     path("language/", views.set_language, name="set_language"),
     path("api/leads/", views.lead_create, name="lead_create"),
 

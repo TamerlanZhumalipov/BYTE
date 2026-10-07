@@ -166,3 +166,35 @@ class AIMessageAdmin(admin.ModelAdmin):
     @admin.display(description="Текст")
     def short_content(self, obj):
         return obj.content[:80]
+
+
+from .models import ENTSpecification, ENTTopic
+
+
+class ENTTopicInline(admin.TabularInline):
+    model = ENTTopic
+    extra = 0
+    fields = ("code", "title", "title_kk", "mapping_notes")
+    show_change_link = True
+
+
+@admin.register(ENTSpecification)
+class ENTSpecificationAdmin(admin.ModelAdmin):
+    list_display = ("year", "subject", "title", "question_count", "max_score")
+    search_fields = ("title", "title_kk")
+    inlines = [ENTTopicInline]
+
+
+@admin.register(ENTTopic)
+class ENTTopicAdmin(admin.ModelAdmin):
+    list_display = ("code", "title", "specification", "mapping_count")
+    list_filter = ("specification",)
+    search_fields = ("code", "title", "title_kk", "sections__title", "sections__slug")
+    filter_horizontal = ("sections",)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("sections")
+
+    @admin.display(description="Связанных тем BYTE")
+    def mapping_count(self, obj):
+        return len(obj.sections.all())
