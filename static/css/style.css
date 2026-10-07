@@ -935,3 +935,12 @@ select:focus-visible {
   .signup-form { flex-direction: column; }
   .signup-form input, .signup-form select { min-width: 0; width: 100%; }
 }
+
+/* ---------- RU / KZ language switch ---------- */
+.lang-switch{display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--border);border-radius:11px;background:var(--bg-card)}
+.lang-option{min-width:34px;height:30px;padding:0 8px;border:0;border-radius:8px;background:transparent;color:var(--text-faint);font:700 11px var(--font-mono);letter-spacing:.04em;cursor:pointer;transition:background .18s ease,color .18s ease,transform .18s ease}
+.lang-option:hover{color:var(--text)}
+.lang-option.is-active{background:var(--gradient);color:#fff;box-shadow:0 6px 16px rgba(62,123,250,.18)}
+.lang-option:active{transform:scale(.96)}
+html.light-theme .lang-switch{background:#fff;border-color:var(--border)}
+@media(max-width:640px){.lang-option{min-width:31px;padding:0 6px}.lang-switch{padding:2px}}
