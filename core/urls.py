@@ -3,6 +3,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path("language/", views.set_language, name="set_language"),
     path("api/leads/", views.lead_create, name="lead_create"),
 
     # Кабинет: материалы
