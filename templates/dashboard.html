@@ -1,12 +1,12 @@
 {% extends "app_base.html" %}
-{% load static %}
+{% load static byte_i18n %}
 
-{% block title %}{% if current %}{{ current.title }}{% else %}Материалы{% endif %}{% endblock %}
+{% block title %}{% if current %}{{ current.display_title }}{% else %}{% bt "Материалы" %}{% endif %}{% endblock %}
 
 {% block body %}
 <div class="dash">
   <aside class="dash-side" id="dash-side" aria-label="Темы ЕНТ">
-    <span class="dash-side-title">Материалы ЕНТ</span>
+    <span class="dash-side-title">{% bt "{% bt "Материалы" %} ЕНТ" %}</span>
     <nav class="tree">
       {% include "_tree.html" with nodes=roots depth=0 %}
     </nav>
@@ -25,59 +25,59 @@
 
     {% if current %}
       <nav class="crumbs" aria-label="Путь">
-        <a href="{% url 'dashboard' %}">Материалы</a>
-        {% for a in breadcrumbs %}<span aria-hidden="true">/</span><a href="{{ a.get_absolute_url }}">{{ a.title }}</a>{% endfor %}
-        {% if current.parent_id %}<span aria-hidden="true">/</span><span>{{ current.title }}</span>{% endif %}
+        <a href="{% url 'dashboard' %}">{% bt "Материалы" %}</a>
+        {% for a in breadcrumbs %}<span aria-hidden="true">/</span><a href="{{ a.get_absolute_url }}">{{ a.display_title }}</a>{% endfor %}
+        {% if current.parent_id %}<span aria-hidden="true">/</span><span>{{ current.display_title }}</span>{% endif %}
       </nav>
 
       <article class="doc">
         <div class="lesson-heading">
           <div>
-            <span class="lesson-kicker">{% if current.parent_id %}урок{% else %}основная тема{% endif %}</span>
-            <h1>{{ current.title }}</h1>
+            <span class="lesson-kicker">{% if current.parent_id %}{% bt "урок" %}{% else %}{% bt "основная тема" %}{% endif %}</span>
+            <h1>{{ current.display_title }}</h1>
           </div>
           {% if current_topic_completed %}
-          <span class="status-pill status-done">✓ тема пройдена</span>
+          <span class="status-pill status-done">✓ {% bt "тема пройдена" %}</span>
           {% endif %}
         </div>
-        {% if current.summary %}<p class="doc-lead">{{ current.summary }}</p>{% endif %}
+        {% if current.display_summary %}<p class="doc-lead">{{ current.display_summary }}</p>{% endif %}
 
-        {% if current.video_url %}
-        <section class="lesson-block lesson-video-block" aria-label="Видео урока">
+        {% if current.display_video_url %}
+        <section class="lesson-block lesson-video-block" aria-label="Видео {% bt "урок" %}а">
           <div class="lesson-block-head">
-            <div><span class="lesson-format">01 · видео</span><h2>Видеоразбор</h2></div>
-            <a class="video-external" href="{{ current.video_url }}" target="_blank" rel="noopener">Открыть отдельно ↗</a>
+            <div><span class="lesson-format">01 · {% bt "видео" %}</span><h2>{% bt "Видеоразбор" %}</h2></div>
+            <a class="video-external" href="{{ current.display_video_url }}" target="_blank" rel="noopener">{% bt "Открыть отдельно ↗" %}</a>
           </div>
           <div class="video-frame">
-            <iframe src="{{ current.video_embed_url }}" title="Видео: {{ current.title }}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            <iframe src="{{ current.display_video_embed_url }}" title="Видео: {{ current.display_title }}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
           </div>
         </section>
         {% endif %}
 
-        {% if current.content %}
+        {% if current.display_content %}
         <section class="lesson-block lesson-text-block">
           <div class="lesson-block-head">
-            <div><span class="lesson-format">{% if current.video_url %}02{% else %}01{% endif %} · конспект</span><h2>Материал урока</h2></div>
+            <div><span class="lesson-format">{% if current.display_video_url %}02{% else %}01{% endif %} · конспект</span><h2>Материал {% bt "урок" %}а</h2></div>
           </div>
-          <div class="doc-body">{{ current.content|safe }}</div>
+          <div class="doc-body">{{ current.display_content|safe }}</div>
         </section>
         {% elif not current.kids and not current.video_url %}
-          <p class="doc-empty">Материал по этому уроку скоро появится.</p>
+          <p class="doc-empty">Материал по этому {% bt "урок" %}у скоро появится.</p>
         {% endif %}
 
         {% if current.kids %}
           <div class="doc-children">
             <div class="lesson-block-head">
-              <div><span class="lesson-format">уроки темы</span><h2>Что нужно пройти</h2></div>
+              <div><span class="lesson-format">{% bt "урок" %}и темы</span><h2>{% bt "Что нужно пройти" %}</h2></div>
             </div>
             <ul class="child-list">
               {% for k in current.kids %}
               <li><a class="child-link" href="{{ k.get_absolute_url }}">
                 <span class="child-order">{{ forloop.counter|stringformat:"02d" }}</span>
                 <span class="child-copy">
-                  <strong>{{ k.title }}</strong>
-                  {% if k.summary %}<span>{{ k.summary }}</span>{% endif %}
-                  <small>{% if k.video_url %}Видео + текст{% else %}Текстовый урок{% endif %}</small>
+                  <strong>{{ k.display_title }}</strong>
+                  {% if k.display_summary %}<span>{{ k.display_summary }}</span>{% endif %}
+                  <small>{% if k.display_video_url %}{% bt "Видео + текст" %}{% else %}Текстовый {% bt "урок" %}{% endif %}</small>
                 </span>
                 <span class="child-arrow">→</span>
               </a></li>
@@ -89,18 +89,18 @@
         {% if current_root and current.id == current_root.id %}
         <section class="topic-checkpoint">
           <div>
-            <span class="lesson-format">закрепление темы</span>
-            <h2>Проверочный тест</h2>
+            <span class="lesson-format">{% bt "закрепление темы" %}</span>
+            <h2>{% bt "Проверочный тест" %}</h2>
             {% if current_quiz %}
-              <p>Чтобы открыть следующую основную тему, нужно набрать минимум {{ current_quiz.pass_percent }}%.</p>
-              {% if current_best_score is not None %}<span class="checkpoint-score">Лучший результат: {{ current_best_score }}%</span>{% endif %}
+              <p>{% if site_lang == "kk" %}Келесі негізгі тақырыпты ашу үшін кемінде {{ current_quiz.pass_percent }}% жинау керек.{% else %}Чтобы открыть следующую основную тему, нужно набрать минимум {{ current_quiz.pass_percent }}%.{% endif %}</p>
+              {% if current_best_score is not None %}<span class="checkpoint-score">{% bt "Лучший результат" %}: {{ current_best_score }}%</span>{% endif %}
             {% else %}
-              <p>Тест для этой темы пока настраивается преподавателем.</p>
+              <p>{% bt "Тест для этой темы пока настраивается преподавателем." %}</p>
             {% endif %}
           </div>
           {% if current_quiz %}
           <a class="btn btn-primary" href="{% url 'topic_quiz' current_root.slug %}">
-            {% if current_topic_completed %}Пройти ещё раз{% else %}Начать тест{% endif %}
+            {% if current_topic_completed %}{% bt "Пройти ещё раз" %}{% else %}{% bt "Начать тест" %}{% endif %}
           </a>
           {% endif %}
         </section>
@@ -108,33 +108,33 @@
 
         <div class="doc-nav">
           {% if prev_section %}
-          <a class="prev" href="{{ prev_section.get_absolute_url }}"><span>Назад</span><strong>{{ prev_section.title }}</strong></a>
+          <a class="prev" href="{{ prev_section.get_absolute_url }}"><span>{% bt "Назад" %}</span><strong>{{ prev_section.display_title }}</strong></a>
           {% endif %}
 
           {% if next_is_quiz %}
           <a class="next next-quiz" href="{% url 'topic_quiz' current_root.slug %}">
-            <span>Следующий шаг · закрепление</span>
-            <strong>Пройти тест по теме →</strong>
+            <span>{% bt "Следующий шаг · закрепление" %}</span>
+            <strong>{% bt "Пройти тест по теме →" %}</strong>
           </a>
           {% elif next_section %}
-          <a class="next" href="{{ next_section.get_absolute_url }}"><span>Дальше</span><strong>{{ next_section.title }}</strong></a>
+          <a class="next" href="{{ next_section.get_absolute_url }}"><span>{% bt "Дальше" %}</span><strong>{{ next_section.display_title }}</strong></a>
           {% endif %}
         </div>
       </article>
 
     {% else %}
       <div class="welcome">
-        <span class="kicker">кабинет ученика</span>
+        <span class="kicker">{% bt "кабинет ученика" %}</span>
         <h1>Привет, {{ user.first_name|default:user.get_username }}</h1>
-        <p>Темы открываются последовательно: завершите текущую тему и пройдите её тест, чтобы открыть следующую.</p>
+        <p>{% bt "Темы открываются последовательно: завершите текущую тему и пройдите её тест, чтобы открыть следующую." %}</p>
 
         {% if next_contest %}
         <div class="contest-banner">
           <div>
-            <strong>Лайв-контест «{{ next_contest.title }}»</strong>
+            <strong>{% bt "Лайв-контест" %} «{{ next_contest.title }}»</strong>
             <p>{{ next_contest.starts_at|date:"j E, H:i" }} · {{ next_contest.duration_minutes }} мин · 3 задачи</p>
           </div>
-          <a class="btn btn-primary" href="{% url 'contest' %}">Перейти к контесту</a>
+          <a class="btn btn-primary" href="{% url 'contest' %}">{% bt "Перейти к контесту" %}</a>
         </div>
         {% endif %}
 
@@ -143,29 +143,29 @@
           {% for s in roots %}
           {% if s.is_locked %}
           <div class="topic-card topic-card-locked" aria-disabled="true">
-            <div class="topic-card-top"><span class="tree-num">{{ forloop.counter|stringformat:"02d" }}</span><span class="status-pill status-locked">🔒 закрыто</span></div>
-            <h3>{{ s.title }}</h3>
-            {% if s.summary %}<p>{{ s.summary }}</p>{% endif %}
-            <span class="topic-meta">Откроется после предыдущей темы</span>
+            <div class="topic-card-top"><span class="tree-num">{{ forloop.counter|stringformat:"02d" }}</span><span class="status-pill status-locked">🔒 {% bt "закрыто" %}</span></div>
+            <h3>{{ s.display_title }}</h3>
+            {% if s.display_summary %}<p>{{ s.display_summary }}</p>{% endif %}
+            <span class="topic-meta">{% bt "Откроется после предыдущей темы" %}</span>
           </div>
           {% else %}
           <a class="topic-card{% if s.is_completed %} topic-card-done{% endif %}" href="{{ s.get_absolute_url }}">
             <div class="topic-card-top">
               <span class="tree-num">{{ forloop.counter|stringformat:"02d" }}</span>
-              {% if s.is_completed %}<span class="status-pill status-done">✓ пройдено</span>{% else %}<span class="status-pill status-open">доступно</span>{% endif %}
+              {% if s.is_completed %}<span class="status-pill status-done">✓ {% bt "пройдено" %}</span>{% else %}<span class="status-pill status-open">{% bt "доступно" %}</span>{% endif %}
             </div>
-            <h3>{{ s.title }}</h3>
-            {% if s.summary %}<p>{{ s.summary }}</p>{% endif %}
+            <h3>{{ s.display_title }}</h3>
+            {% if s.display_summary %}<p>{{ s.display_summary }}</p>{% endif %}
             <div class="topic-meta-row">
-              <span>уроков: {{ s.kids|length }}</span>
-              {% if s.best_score is not None %}<span>лучший тест: {{ s.best_score }}%</span>{% endif %}
+              <span>{% bt "урок" %}ов: {{ s.kids|length }}</span>
+              {% if s.best_score is not None %}<span>{% bt "лучший тест" %}: {{ s.best_score }}%</span>{% endif %}
             </div>
           </a>
           {% endif %}
           {% endfor %}
         </div>
         {% else %}
-        <p class="doc-empty">Материалы пока не добавлены. Запустите <code>python3 manage.py seed_materials</code> или добавьте разделы в админке.</p>
+        <p class="doc-empty">{% bt "Материалы" %} пока не добавлены. Запустите <code>python3 manage.py seed_materials</code> или добавьте разделы в админке.</p>
         {% endif %}
       </div>
     {% endif %}
@@ -181,7 +181,7 @@
   data-reset-url="{% if current %}{% url 'ai_reset' current.slug %}{% else %}{% url 'ai_reset_home' %}{% endif %}">
   <button class="ai-fab" id="ai-fab" type="button" aria-expanded="false" aria-controls="ai-panel">
     <span class="ai-fab-icon ai-star" aria-hidden="true">✦</span>
-    <span class="ai-fab-copy"><strong>BYTE AI</strong><small>Спросить помощника</small></span>
+    <span class="ai-fab-copy"><strong>BYTE AI</strong><small>{% if site_lang == "kk" %}Көмекшіден сұрау{% else %}Спросить помощника{% endif %}</small></span>
   </button>
 
   <div class="ai-panel" id="ai-panel" aria-hidden="true">
@@ -190,11 +190,11 @@
         <span class="ai-head-icon" aria-hidden="true">✦</span>
         <div>
           <strong>BYTE AI</strong>
-          <span>{% if current %}Контекст: {{ current.title }}{% else %}Личный помощник по BYTE и ЕНТ{% endif %}</span>
+          <span>{% if current %}Контекст: {{ current.display_title }}{% else %}{% if site_lang == "kk" %}BYTE және ҰБТ бойынша жеке көмекші{% else %}Личный помощник по BYTE и ЕНТ{% endif %}{% endif %}</span>
         </div>
       </div>
       <div class="ai-panel-actions">
-        <button class="btn btn-ghost btn-sm" id="ai-reset" type="button">Новый диалог</button>
+        <button class="btn btn-ghost btn-sm" id="ai-reset" type="button">{% if site_lang == "kk" %}Жаңа диалог{% else %}Новый диалог{% endif %}</button>
         <button class="ai-close" id="ai-close" type="button" aria-label="Свернуть">✕</button>
       </div>
     </div>
@@ -202,7 +202,7 @@
     <div class="ai-messages" id="ai-messages" aria-live="polite">
       {% if not ai_history %}
       <div class="ai-msg ai-msg-assistant">
-        <div class="ai-bubble">{% if current %}Сәлем! Я BYTE AI. Помогу разобраться с темой «{{ current.title }}», кодом или задачей.{% else %}Сәлем! Я BYTE AI. Могу помочь выбрать тему, составить план подготовки к ЕНТ, объяснить информатику или разобрать код.{% endif %}</div>
+        <div class="ai-bubble">{% if site_lang == "kk" %}{% if current %}Сәлем! Мен BYTE AI. «{{ current.display_title }}» тақырыбын, кодты немесе есепті түсінуге көмектесемін.{% else %}Сәлем! Мен BYTE AI. Тақырып таңдауға, ҰБТ жоспарын құруға, информатиканы түсіндіруге немесе кодты талдауға көмектесемін.{% endif %}{% else %}{% if current %}Привет! Я BYTE AI. Помогу разобраться с темой «{{ current.display_title }}», кодом или задачей.{% else %}Привет! Я BYTE AI. Могу помочь выбрать тему, составить план подготовки к ЕНТ, объяснить информатику или разобрать код.{% endif %}{% endif %}</div>
       </div>
       {% endif %}
       {% for m in ai_history %}
@@ -211,10 +211,10 @@
     </div>
 
     <form class="ai-form" id="ai-form">
-      <textarea id="ai-input" placeholder="{% if current %}Спросите про этот материал…{% else %}Спросите BYTE AI…{% endif %}" rows="1" maxlength="2000" required></textarea>
+      <textarea id="ai-input" placeholder="{% if current %}{% if site_lang == "kk" %}Осы материал туралы сұраңыз…{% else %}Спросите про этот материал…{% endif %}{% else %}{% if site_lang == "kk" %}BYTE AI-дан сұраңыз…{% else %}Спросите BYTE AI…{% endif %}{% endif %}" rows="1" maxlength="2000" required></textarea>
       <button class="btn btn-primary btn-sm ai-send" type="submit" aria-label="Отправить">↑</button>
     </form>
-    <p class="ai-hint">История хранится только в текущей вкладке и сбросится после её закрытия. Важные ответы лучше перепроверять.</p>
+    <p class="ai-hint">{% if site_lang == "kk" %}Тарих тек осы бетте сақталады және оны жапқанда өшеді. Маңызды жауаптарды қайта тексерген дұрыс.{% else %}История хранится только в текущей вкладке и сбросится после её закрытия. Важные ответы лучше перепроверять.{% endif %}</p>
   </div>
 </div>
 {% endif %}
