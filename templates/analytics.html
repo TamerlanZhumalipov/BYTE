@@ -1,34 +1,34 @@
 {% extends "app_base.html" %}
-{% load static %}
+{% load static byte_i18n %}
 
-{% block title %}Аналитика{% endblock %}
+{% block title %}{% bt "Аналитика" %}{% endblock %}
 
 {% block body %}
 <main class="analytics-page">
   <div class="analytics-shell">
     <header class="analytics-head">
       <div>
-        <span class="kicker">ваш прогресс</span>
-        <h1>Аналитика обучения</h1>
-        <p>Результаты по основным темам, динамика тестов и прогноз итогового уровня при текущем темпе.</p>
+        <span class="kicker">{% bt "ваш прогресс" %}</span>
+        <h1>{% bt "Аналитика обучения" %}</h1>
+        <p>{% bt "Результаты по основным темам, динамика тестов и прогноз итогового уровня при текущем темпе." %}</p>
       </div>
-      <a class="btn btn-ghost" href="{% url 'dashboard' %}">Продолжить обучение</a>
+      <a class="btn btn-ghost" href="{% url 'dashboard' %}">{% bt "Продолжить обучение" %}</a>
     </header>
 
     <section class="analytics-kpis">
       <article class="analytics-card">
-        <span>Пройдено тем</span>
+        <span>{% bt "Пройдено тем" %}</span>
         <strong>{{ completed_topics }} / {{ total_topics }}</strong>
         <div class="analytics-progress"><i style="width: {{ progress_percent }}%"></i></div>
-        <small>{{ progress_percent }}% программы</small>
+        <small>{{ progress_percent }}% {% bt "программы" %}</small>
       </article>
       <article class="analytics-card">
-        <span>Средний лучший результат</span>
+        <span>{% bt "Средний лучший результат" %}</span>
         <strong>{% if average_score is not None %}{{ average_score }}%{% else %}—{% endif %}</strong>
-        <small>по темам, где уже были попытки</small>
+        <small>{% bt "по темам, где уже были попытки" %}</small>
       </article>
       <article class="analytics-card analytics-forecast">
-        <span>Прогноз</span>
+        <span>{% bt "Прогноз" %}</span>
         <strong>{% if forecast_score is not None %}{{ forecast_score }}%{% else %}—{% endif %}</strong>
         <small>{{ trend }}</small>
       </article>
@@ -36,27 +36,27 @@
 
     <section class="analytics-section">
       <div class="section-head compact">
-        <h2>Результаты по темам</h2>
-        <p>Следующая тема открывается только после успешного теста предыдущей.</p>
+        <h2>{% bt "Результаты по темам" %}</h2>
+        <p>{% bt "Следующая тема открывается только после успешного теста предыдущей." %}</p>
       </div>
       <div class="analytics-table-wrap">
         <table class="analytics-table">
-          <thead><tr><th>Тема</th><th>Статус</th><th>Лучший результат</th><th>Попыток</th><th>Последняя попытка</th></tr></thead>
+          <thead><tr><th>{% bt "Тема" %}</th><th>{% bt "Статус" %}</th><th>{% bt "Лучший результат" %}</th><th>{% bt "Попыток" %}</th><th>{% bt "Последняя попытка" %}</th></tr></thead>
           <tbody>
           {% for row in rows %}
           <tr class="{% if row.locked %}is-locked{% endif %}">
-            <td><span class="analytics-topic-num">{{ row.index|stringformat:"02d" }}</span><strong>{{ row.topic.title }}</strong></td>
+            <td><span class="analytics-topic-num">{{ row.index|stringformat:"02d" }}</span><strong>{{ row.topic.display_title }}</strong></td>
             <td>
-              {% if row.completed %}<span class="status-pill status-done">✓ пройдено</span>
-              {% elif row.locked %}<span class="status-pill status-locked">🔒 закрыто</span>
-              {% else %}<span class="status-pill status-open">в процессе</span>{% endif %}
+              {% if row.completed %}<span class="status-pill status-done">✓ {% bt "пройдено" %}</span>
+              {% elif row.locked %}<span class="status-pill status-locked">🔒 {% bt "закрыто" %}</span>
+              {% else %}<span class="status-pill status-open">{% bt "в процессе" %}</span>{% endif %}
             </td>
             <td>{% if row.best_score is not None %}<strong>{{ row.best_score }}%</strong>{% else %}—{% endif %}</td>
             <td>{{ row.attempts_count }}</td>
             <td>{% if row.latest %}{{ row.latest.created_at|date:"d.m.Y H:i" }}{% else %}—{% endif %}</td>
           </tr>
           {% empty %}
-          <tr><td colspan="5">Основные темы пока не добавлены.</td></tr>
+          <tr><td colspan="5">{% bt "Основные темы пока не добавлены." %}</td></tr>
           {% endfor %}
           </tbody>
         </table>
@@ -65,25 +65,25 @@
 
     <section class="analytics-section">
       <div class="section-head compact">
-        <h2>Последние попытки</h2>
-        <p>История результатов поможет увидеть динамику.</p>
+        <h2>{% bt "Последние попытки" %}</h2>
+        <p>{% bt "История результатов поможет увидеть динамику." %}</p>
       </div>
       <div class="attempt-grid">
         {% for attempt in recent_attempts %}
         <article class="attempt-card">
           <div>
             <span>{{ attempt.created_at|date:"d.m · H:i" }}</span>
-            <h3>{{ attempt.quiz.topic.title }}</h3>
+            <h3>{{ attempt.quiz.topic.display_title }}</h3>
           </div>
           <strong class="{% if attempt.passed %}is-good{% else %}is-bad{% endif %}">{{ attempt.score_percent }}%</strong>
         </article>
         {% empty %}
-        <div class="doc-empty">Здесь появятся результаты после первой попытки теста.</div>
+        <div class="doc-empty">{% bt "Здесь появятся результаты после первой попытки теста." %}</div>
         {% endfor %}
       </div>
     </section>
 
-    <p class="analytics-note">Прогноз — ориентир по текущим результатам и их тренду, а не официальный прогноз баллов ЕНТ.</p>
+    <p class="analytics-note">{% bt "Прогноз — ориентир по текущим результатам и их тренду, а не официальный прогноз баллов ЕНТ." %}</p>
   </div>
 </main>
 {% endblock %}
