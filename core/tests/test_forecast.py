@@ -163,8 +163,7 @@ class ForecastTests(TestCase):
         session.save()
         response = self.client.get(reverse("analytics"))
         self.assertContains(response, "ҰБТ-ны бүгін тапсырсаңыз")
-        self.assertEqual(response.context["bootstrap"]["language"], "kk")
-        self.assertEqual(response.context["bootstrap"]["props"]["forecast"]["language"], "kk")
+        self.assertNotContains(response, "Как считается прогноз")
 
     def test_mock_validation_and_duplicate_reference(self):
         result = self.mock()

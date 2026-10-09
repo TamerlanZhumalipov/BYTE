@@ -15,7 +15,3 @@ staticfiles/
 .DS_Store
 .idea/
 .vscode/
-
-# React build dependencies (production bundle is committed)
-frontend/node_modules/
-frontend/coverage/
