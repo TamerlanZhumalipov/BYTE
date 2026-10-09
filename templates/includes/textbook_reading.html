@@ -1,0 +1,11 @@
+{% if reading %}
+<div class="textbook-reading">
+  <h5>{% if site_lang == 'kk' %}Не оқу керек{% else %}Что почитать{% endif %}</h5>
+  {% for book in reading %}
+  <p><strong>{{ book.title }} · {{ book.grade }} {% if site_lang == 'kk' %}сынып{% else %}класс{% endif %}</strong><br>
+  {{ book.authors }}<br>{{ book.publisher }}, {{ book.year }}{% if book.edition %}, {{ book.edition }}{% endif %} · {% if book.language == 'kk' %}Қазақша{% else %}Русский{% endif %}<br>
+  § {{ book.paragraph }} «{{ book.paragraph_title }}»<br>
+  {% if site_lang == 'kk' %}Бастапқы бет:{% else %}Начальная страница:{% endif %} {{ book.page_start }}</p>
+  {% endfor %}
+</div>
+{% endif %}

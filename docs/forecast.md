@@ -80,8 +80,8 @@ Historical points at −30/−21/−14/−7 days filter out later evidence and r
 with the **current** mappings, ownership, verification flags and weights. This
 is a retrospective calculation, not an immutable record of past predictions.
 Trend is absent unless both endpoints have sufficient evidence. Decay can change
-estimates even without a new attempt. GET performs 6 queries with quizzes alone,
-7 with contest submissions, independent of topic count. Evidence is loaded once
+estimates even without a new attempt. GET performs 8 queries with quizzes alone,
+9 with contest submissions when reading recommendations exist, independent of topic count. Evidence is loaded once
 for all history points; very large histories may need database-side windowing.
 
 ## Validation and next calibration step

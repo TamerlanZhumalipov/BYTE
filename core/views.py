@@ -17,6 +17,7 @@ from django.views.decorators.cache import never_cache
 
 from .forms import LeadForm
 from .forecast import get_forecast
+from .textbooks import book_reply
 from .judge import LANGUAGES, MAX_CODE_BYTES, run_submission
 from .localization import get_request_language, tr
 from .models import (
@@ -679,15 +680,21 @@ def _ai_rate_limit(request):
 @login_required
 @require_POST
 def ai_ask_home(request):
-    if not ai_module.is_configured():
-        return JsonResponse({"error": "BYTE AI сейчас недоступен. Проверьте GEMINI_API_KEY."}, status=503)
-
     message, history, error = _ai_request_payload(request)
     if error:
         return error
     limited = _ai_rate_limit(request)
     if limited:
         return limited
+
+    reading = book_reply(message, None, get_request_language(request))
+    if reading is not None:
+        AIMessage.objects.create(user=request.user, section=None, role="user", content=message)
+        AIMessage.objects.create(user=request.user, section=None, role="assistant", content=reading)
+        return JsonResponse({"content": reading})
+
+    if not ai_module.is_configured():
+        return JsonResponse({"error": "BYTE AI сейчас недоступен. Проверьте GEMINI_API_KEY."}, status=503)
 
     # Сообщения можно оставлять в БД для лимитов/админки, но они больше
     # не восстанавливаются в чат и не используются как история новой сессии.
@@ -720,9 +727,6 @@ def ai_reset_home(request):
 @login_required
 @require_POST
 def ai_ask(request, slug):
-    if not ai_module.is_configured():
-        return JsonResponse({"error": "Помощник сейчас недоступен. Сообщите куратору."}, status=503)
-
     section = Section.objects.filter(slug=slug, is_published=True).first()
     if section is None:
         raise Http404("Раздел не найден")
@@ -735,6 +739,15 @@ def ai_ask(request, slug):
     limited = _ai_rate_limit(request)
     if limited:
         return limited
+
+    reading = book_reply(message, section, get_request_language(request))
+    if reading is not None:
+        AIMessage.objects.create(user=request.user, section=section, role="user", content=message)
+        AIMessage.objects.create(user=request.user, section=section, role="assistant", content=reading)
+        return JsonResponse({"content": reading})
+
+    if not ai_module.is_configured():
+        return JsonResponse({"error": "Помощник сейчас недоступен. Сообщите куратору."}, status=503)
 
     AIMessage.objects.create(user=request.user, section=section, role="user", content=message)
 

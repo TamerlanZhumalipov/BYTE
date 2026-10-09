@@ -441,3 +441,53 @@ class ENTPracticeResult(models.Model):
 
     def __str__(self):
         return f"{self.user} · {self.score}/{self.max_score} · {self.source}"
+
+
+class Textbook(models.Model):
+    title = models.CharField("Название", max_length=250)
+    authors = models.CharField("Авторы", max_length=500)
+    grade = models.PositiveSmallIntegerField("Класс", validators=[MinValueValidator(1)])
+    language = models.CharField("Язык", max_length=2, choices=[("ru", "Русский"), ("kk", "Қазақша")])
+    publisher = models.CharField("Издательство", max_length=200)
+    year = models.PositiveSmallIntegerField("Год")
+    edition = models.CharField("Издание", max_length=100, blank=True)
+    isbn = models.CharField("ISBN", max_length=32, unique=True)
+    page_count = models.PositiveIntegerField("Количество страниц")
+    is_active = models.BooleanField("Показывать рекомендации", default=True)
+
+    class Meta:
+        verbose_name = "учебник"
+        verbose_name_plural = "учебники"
+        ordering = ["grade", "title", "year"]
+
+    def __str__(self):
+        return f"{self.title}, {self.grade}, {self.publisher}, {self.year} ({self.language})"
+
+
+class TextbookReference(models.Model):
+    textbook = models.ForeignKey(Textbook, on_delete=models.CASCADE, related_name="references", verbose_name="Учебник")
+    paragraph = models.CharField("Параграф", max_length=30)
+    title = models.CharField("Название в учебнике", max_length=250)
+    page_start = models.PositiveIntegerField("Печатная страница начала", validators=[MinValueValidator(1)])
+    pdf_page = models.PositiveIntegerField("Страница PDF", null=True, blank=True, validators=[MinValueValidator(1)])
+    sections = models.ManyToManyField(Section, blank=True, related_name="textbook_references", verbose_name="Разделы BYTE")
+    ent_topics = models.ManyToManyField(ENTTopic, blank=True, related_name="textbook_references", verbose_name="Темы ЕНТ")
+    verified = models.BooleanField("Ссылка проверена", default=False)
+    verification_note = models.TextField("Основание проверки", blank=True)
+    keywords = models.CharField("Ключевые слова RU/KZ через запятую", max_length=500, blank=True)
+
+    class Meta:
+        verbose_name = "ссылка на параграф"
+        verbose_name_plural = "ссылки на параграфы"
+        ordering = ["textbook_id", "page_start"]
+        constraints = [models.UniqueConstraint(fields=["textbook", "paragraph"], name="unique_textbook_paragraph")]
+
+    def clean(self):
+        super().clean()
+        if self.textbook_id and self.page_start and self.page_start > self.textbook.page_count:
+            raise ValidationError({"page_start": "Страница превышает объём учебника."})
+        if self.verified and not self.verification_note.strip():
+            raise ValidationError({"verification_note": "Укажите, как проверены параграф и страница."})
+
+    def __str__(self):
+        return f"{self.paragraph}. {self.title} — {self.page_start}"

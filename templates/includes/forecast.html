@@ -37,7 +37,7 @@
     <h3>{% bt "Что улучшить дальше" %}</h3>
     <div class="forecast-recommendations">
     {% for topic in forecast.recommendations %}
-      <article><span>{{ topic.code }}</span><h4>{{ topic.title }}</h4><p>{% if not topic.mapped and not topic.has_evidence %}{% bt "Материалов по теме пока нет. Обсудите диагностику с куратором." %}{% elif not topic.has_evidence %}{% bt "Нужна диагностика: данных по теме пока нет." %}{% else %}{% bt "Повторите тему и проверьте результат новым тестом или пробником." %}{% endif %}</p></article>
+      <article><span>{{ topic.code }}</span><h4>{{ topic.title }}</h4><p>{% if not topic.mapped and not topic.has_evidence %}{% bt "Материалов по теме пока нет. Обсудите диагностику с куратором." %}{% elif not topic.has_evidence %}{% bt "Нужна диагностика: данных по теме пока нет." %}{% else %}{% bt "Повторите тему и проверьте результат новым тестом или пробником." %}{% endif %}</p>{% include "includes/textbook_reading.html" with reading=topic.reading %}</article>
     {% endfor %}
     </div>
     <a class="btn btn-ghost" href="{% url 'dashboard' %}">{% bt "Продолжить обучение" %} →</a>
