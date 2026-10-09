@@ -109,6 +109,3 @@ AI_MAX_TOKENS = int(os.environ.get("AI_MAX_TOKENS", "700"))
 AI_HISTORY_MESSAGES = 8    # сколько последних реплик диалога передаём модели как контекст
 AI_COOLDOWN_SECONDS = 4    # минимальный промежуток между вопросами одного ученика
 AI_DAILY_LIMIT = 200       # вопросов в сутки на одного ученика (защита от случайных расходов)
-
-# React pages; set to 0 for the retained Django-template fallback.
-REACT_FRONTEND_ENABLED = os.environ.get("REACT_FRONTEND_ENABLED", "1") == "1"

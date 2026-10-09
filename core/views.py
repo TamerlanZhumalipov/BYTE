@@ -8,8 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.http import Http404, JsonResponse
 from django.db import IntegrityError
-from django.shortcuts import redirect
-from .frontend import render_page as render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
