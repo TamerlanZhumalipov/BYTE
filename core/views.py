@@ -13,8 +13,10 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 
 from .forms import LeadForm
+from .forecast import get_forecast
 from .judge import LANGUAGES, MAX_CODE_BYTES, run_submission
 from .localization import get_request_language, tr
 from .models import (
@@ -380,46 +382,8 @@ def topic_quiz(request, slug):
     })
 
 
-def _analytics_forecast(roots):
-    points = [
-        (index + 1, root.best_score)
-        for index, root in enumerate(roots)
-        if root.best_score is not None
-    ]
-    if not points:
-        return None, "Недостаточно данных"
-
-    if len(points) == 1:
-        return int(points[0][1]), "Первичный прогноз"
-
-    xs = [point[0] for point in points]
-    ys = [point[1] for point in points]
-    x_mean = sum(xs) / len(xs)
-    y_mean = sum(ys) / len(ys)
-    denominator = sum((x - x_mean) ** 2 for x in xs)
-    slope = (
-        sum((x - x_mean) * (y - y_mean) for x, y in points) / denominator
-        if denominator else 0
-    )
-    intercept = y_mean - slope * x_mean
-
-    projected = []
-    known = {x: y for x, y in points}
-    for index in range(1, len(roots) + 1):
-        value = known.get(index, intercept + slope * index)
-        projected.append(max(0, min(100, value)))
-
-    forecast = round(sum(projected) / len(projected))
-    if slope > 2:
-        trend = "Результаты растут"
-    elif slope < -2:
-        trend = "Есть нисходящий тренд"
-    else:
-        trend = "Результаты стабильны"
-    return forecast, trend
-
-
 @login_required
+@never_cache
 def analytics(request):
     lang = get_request_language(request)
     roots, _ = _build_tree(lang)
@@ -445,8 +409,7 @@ def analytics(request):
     progress_percent = round(completed_topics * 100 / total_topics) if total_topics else 0
     scored = [root.best_score for root in roots if root.best_score is not None]
     average_score = round(sum(scored) / len(scored)) if scored else None
-    forecast_score, trend = _analytics_forecast(roots)
-    trend = tr(trend, lang)
+    forecast = get_forecast(request.user, language=lang)
 
     recent_attempts = learning["attempts"][:6]
     for attempt in recent_attempts:
@@ -459,8 +422,7 @@ def analytics(request):
         "completed_topics": completed_topics,
         "progress_percent": progress_percent,
         "average_score": average_score,
-        "forecast_score": forecast_score,
-        "trend": trend,
+        "forecast": forecast,
         "recent_attempts": recent_attempts,
     })
 

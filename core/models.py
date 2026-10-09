@@ -4,6 +4,8 @@ from urllib.parse import parse_qs, urlparse
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
 from django.db import models
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.urls import reverse
 from django.utils import timezone
 
@@ -236,6 +238,7 @@ class Contest(models.Model):
 
 
 class ContestTask(models.Model):
+    ent_topics = models.ManyToManyField("ENTTopic", blank=True, related_name="contest_tasks", verbose_name="Темы ЕНТ")
     contest = models.ForeignKey(Contest, verbose_name="Контест", related_name="tasks", on_delete=models.CASCADE)
     order = models.PositiveSmallIntegerField("Номер", default=1)
     title = models.CharField("Название", max_length=200)
@@ -272,6 +275,7 @@ class ContestAccount(models.Model):
 
     Не связан с логином на сайте: куратор выдаёт его каждому участнику вручную.
     """
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="contest_accounts", verbose_name="Ученик BYTE", help_text="Назначается куратором. Совпадение имени или логина не подтверждает владельца.")
     contest = models.ForeignKey(Contest, verbose_name="Контест", related_name="accounts", on_delete=models.CASCADE)
     full_name = models.CharField("Имя участника", max_length=150, blank=True)
     login = models.CharField("Логин контеста", max_length=50, unique=True)
@@ -364,6 +368,8 @@ class ENTSpecification(models.Model):
     title_kk = models.CharField("Название (KZ)", max_length=200, blank=True)
     source_url = models.URLField("Спецификация RU", blank=True)
     source_url_kk = models.URLField("Спецификация KZ", blank=True)
+    forecast_weight_note = models.CharField("Основание весов (RU)", max_length=500, blank=True)
+    forecast_weight_note_kk = models.CharField("Основание весов (KZ)", max_length=500, blank=True)
     question_count = models.PositiveSmallIntegerField(default=40)
     max_score = models.PositiveSmallIntegerField(default=50)
 
@@ -387,6 +393,11 @@ class ENTTopic(models.Model):
         limit_choices_to={"parent__isnull": True}, verbose_name="Корневые темы BYTE",
         help_text="Начальное сопоставление может покрывать только часть официальной темы.",
     )
+    forecast_weight = models.DecimalField(
+        "Относительный вес в прогнозе", max_digits=6, decimal_places=3, default=1,
+        validators=[MinValueValidator(0.001)],
+        help_text="Модельное допущение, не официальные баллы. По умолчанию все темы равновесны.",
+    )
     mapping_notes = models.TextField("Примечания к покрытию", blank=True)
 
     class Meta:
@@ -397,3 +408,36 @@ class ENTTopic(models.Model):
 
     def __str__(self):
         return f"{self.code} · {self.title}"
+
+
+class ENTPracticeResult(models.Model):
+    """Verified full mock score; adapter target for future exam variants."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="ent_practice_results", verbose_name="Ученик")
+    specification = models.ForeignKey(ENTSpecification, on_delete=models.PROTECT, related_name="practice_results", verbose_name="Спецификация")
+    score = models.PositiveSmallIntegerField("Набранные баллы")
+    max_score = models.PositiveSmallIntegerField("Максимум баллов", default=50, validators=[MinValueValidator(1)])
+    taken_at = models.DateTimeField("Дата прохождения", default=timezone.now)
+    source = models.CharField("Вариант / источник", max_length=200)
+    reference = models.CharField("Уникальный ID результата", max_length=200, unique=True, help_text="Например mock:variant-12:user-42:attempt-1; защищает от повторного импорта.")
+    verified = models.BooleanField("Результат проверен", default=False)
+
+    class Meta:
+        ordering = ["-taken_at", "-pk"]
+        verbose_name = "результат пробника ЕНТ"
+        verbose_name_plural = "результаты пробников ЕНТ"
+        constraints = [
+            models.CheckConstraint(check=models.Q(max_score__gt=0), name="ent_practice_max_positive"),
+            models.CheckConstraint(check=models.Q(score__lte=models.F("max_score")), name="ent_practice_score_valid"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.max_score and self.score is not None and self.score > self.max_score:
+            raise ValidationError({"score": "Баллы не могут превышать максимум."})
+        if self.taken_at and self.taken_at > timezone.now():
+            raise ValidationError({"taken_at": "Дата результата не может быть в будущем."})
+        if self.specification_id and self.max_score != self.specification.max_score:
+            raise ValidationError({"max_score": "Нужен полный пробник выбранной спецификации."})
+
+    def __str__(self):
+        return f"{self.user} · {self.score}/{self.max_score} · {self.source}"

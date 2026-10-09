@@ -75,7 +75,7 @@ class QuizAttemptAdmin(admin.ModelAdmin):
 class ContestTaskInline(admin.StackedInline):
     model = ContestTask
     extra = 0
-    fields = ("order", "title", "time_limit", "statement")
+    fields = ("order", "title", "time_limit", "statement", "ent_topics")
 
 
 @admin.register(Contest)
@@ -86,6 +86,7 @@ class ContestAdmin(admin.ModelAdmin):
 
 @admin.register(ContestTask)
 class ContestTaskAdmin(admin.ModelAdmin):
+    filter_horizontal = ("ent_topics",)
     list_display = ("title", "contest", "order", "tests_count")
     list_filter = ("contest",)
 
@@ -116,7 +117,7 @@ class ContestAccountForm(forms.ModelForm):
 
     class Meta:
         model = ContestAccount
-        fields = ["contest", "full_name", "login", "is_active"]
+        fields = ["contest", "user", "full_name", "login", "is_active"]
 
     def clean_login(self):
         return self.cleaned_data["login"].strip().lower()
@@ -131,7 +132,8 @@ class ContestAccountForm(forms.ModelForm):
 @admin.register(ContestAccount)
 class ContestAccountAdmin(admin.ModelAdmin):
     form = ContestAccountForm
-    list_display = ("login", "full_name", "contest", "is_active")
+    list_display = ("login", "full_name", "user", "contest", "is_active")
+    autocomplete_fields = ("user",)
     list_filter = ("contest", "is_active")
     search_fields = ("login", "full_name")
 
@@ -174,7 +176,7 @@ from .models import ENTSpecification, ENTTopic
 class ENTTopicInline(admin.TabularInline):
     model = ENTTopic
     extra = 0
-    fields = ("code", "title", "title_kk", "mapping_notes")
+    fields = ("code", "title", "title_kk", "forecast_weight", "mapping_notes")
     show_change_link = True
 
 
@@ -198,3 +200,14 @@ class ENTTopicAdmin(admin.ModelAdmin):
     @admin.display(description="Связанных тем BYTE")
     def mapping_count(self, obj):
         return len(obj.sections.all())
+
+
+from .models import ENTPracticeResult
+
+
+@admin.register(ENTPracticeResult)
+class ENTPracticeResultAdmin(admin.ModelAdmin):
+    list_display = ("user", "source", "score", "max_score", "taken_at", "verified")
+    list_filter = ("specification", "verified")
+    search_fields = ("user__username", "source", "reference")
+    autocomplete_fields = ("user",)

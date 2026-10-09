@@ -18,3 +18,18 @@ def ent_specification(request, year):
     except ENTSpecification.DoesNotExist:
         raise Http404("ENT specification not found")
     return JsonResponse(data)
+
+
+from django.views.decorators.cache import never_cache
+from .forecast import get_forecast
+
+
+@login_required
+@never_cache
+@require_GET
+def ent_forecast(request):
+    language = request.GET.get("language", get_request_language(request))
+    if language not in {"ru", "kk", "kz"}:
+        return JsonResponse({"error": "Unsupported language"}, status=400)
+    # Always request.user; there is intentionally no user ID parameter.
+    return JsonResponse(get_forecast(request.user, language=language))

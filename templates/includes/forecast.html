@@ -1,0 +1,73 @@
+{% load byte_i18n %}
+<section class="byte-forecast" aria-labelledby="forecast-heading">
+  <header class="forecast-heading">
+    <div><span class="kicker">BYTE AI · FORECAST</span><h2 id="forecast-heading">{% bt "Если сдавать ЕНТ сегодня" %}</h2></div>
+    <span class="forecast-badge">{% bt "Предварительная модель" %}</span>
+  </header>
+  {% if forecast.status == "unavailable" %}
+    <p>{% bt "Спецификация ещё не настроена. Прогноз появится после настройки тем ЕНТ." %}</p>
+  {% else %}
+  <div class="forecast-overview">
+    <div class="forecast-result">
+      {% if forecast.score is not None %}
+        <div class="forecast-number">≈ {{ forecast.score }} <span>/ {{ forecast.max_score }}</span></div>
+        <p>{% bt "Ориентировочный диапазон" %}: <strong>{{ forecast.low }}–{{ forecast.high }}</strong></p>
+        <p>{% bt "Надёжность данных" %}: <strong>{% if forecast.confidence == "medium" %}{% bt "средняя" %}{% else %}{% bt "низкая" %}{% endif %}</strong></p>
+      {% else %}
+        <div class="forecast-number">— <span>/ {{ forecast.max_score }}</span></div>
+        <h3>{% bt "Пока недостаточно данных" %}</h3>
+        <p>{% bt "Пройдите тесты по нескольким темам. Один проверенный полный пробник тоже позволит построить первую оценку." %}</p>
+      {% endif %}
+      <p class="forecast-delta">{% bt "Изменение за 30 дней" %}: {% if forecast.delta is not None %}<strong>{% if forecast.delta > 0 %}+{% endif %}{{ forecast.delta }}</strong>{% else %}{% bt "данных пока мало" %}{% endif %}</p>
+    </div>
+    <div class="forecast-evidence">
+      <h3>{% bt "На чём основан прогноз" %}</h3>
+      <dl>
+        <div><dt>{% bt "Тесты по разным темам" %}</dt><dd>{{ forecast.quiz_count }}</dd></div>
+        <div><dt>{% bt "Связанные задачи контестов" %}</dt><dd>{{ forecast.contest_count }}</dd></div>
+        <div><dt>{% bt "Проверенные пробники" %}</dt><dd>{{ forecast.mock_count }}</dd></div>
+      </dl>
+      <p>{% bt "Обеспеченность данными" %}: <strong>{{ forecast.coverage_percent }}%</strong></p>
+      <progress max="100" value="{{ forecast.coverage_percent }}" aria-label="{% bt 'Обеспеченность данными' %}"></progress>
+      <small>{% bt "Учитываются давность, объём и покрытие результатов. Повтор одного теста не считается новой темой." %}</small>
+    </div>
+  </div>
+  <p class="forecast-disclaimer">{% bt "Это предварительная оценка, а не гарантия результата. Диапазон модельный: его точность ещё предстоит проверить на реальных экзаменах." %}</p>
+  <div class="forecast-next">
+    <h3>{% bt "Что улучшить дальше" %}</h3>
+    <div class="forecast-recommendations">
+    {% for topic in forecast.recommendations %}
+      <article><span>{{ topic.code }}</span><h4>{{ topic.title }}</h4><p>{% if not topic.mapped and not topic.has_evidence %}{% bt "Материалов по теме пока нет. Обсудите диагностику с куратором." %}{% elif not topic.has_evidence %}{% bt "Нужна диагностика: данных по теме пока нет." %}{% else %}{% bt "Повторите тему и проверьте результат новым тестом или пробником." %}{% endif %}</p></article>
+    {% endfor %}
+    </div>
+    <a class="btn btn-ghost" href="{% url 'dashboard' %}">{% bt "Продолжить обучение" %} →</a>
+  </div>
+  <details class="forecast-details">
+    <summary>{% bt "Разбор по темам ЕНТ" %} · {{ forecast.topic_count }}</summary>
+    <p>{% bt "Освоение — оценка по доступным результатам. Вклад в баллы рассчитан по весам модели; это не официальное распределение заданий ЕНТ." %}</p>
+    <div class="analytics-table-wrap"><table class="analytics-table forecast-table">
+      <thead><tr><th>{% bt "Тема" %}</th><th>{% bt "Освоение" %}</th><th>{% bt "Вклад модели" %}</th><th>{% bt "Данные" %}</th></tr></thead>
+      <tbody>{% for topic in forecast.topics %}<tr>
+        <td><span class="analytics-topic-num">{{ topic.code }}</span><strong>{{ topic.title }}</strong></td>
+        <td>{% if topic.mastery is not None %}{{ topic.mastery }}%{% else %}—{% endif %}</td>
+        <td>{% if topic.has_evidence %}{{ topic.model_points }} / {{ topic.model_max }}{% else %}—{% endif %}</td>
+        <td>{% if topic.has_evidence %}{% bt "Тесты" %}: {{ topic.quiz_roots }} · {% bt "Контесты" %}: {{ topic.contest_tasks }}{% else %}{% bt "Нет результатов" %}{% endif %}</td>
+      </tr>{% endfor %}</tbody>
+    </table></div>
+  </details>
+  <details class="forecast-details">
+    <summary>{% bt "Динамика за 30 дней" %}</summary>
+    <p>{% bt "История пересчитана по текущим связям и весам. Для каждой даты используются только результаты, полученные к тому моменту." %}</p>
+    <ol class="forecast-history">{% for point in forecast.history %}<li><time>{{ point.date }}</time><progress max="{{ forecast.max_score }}" value="{{ point.score|default_if_none:0 }}" aria-label="{{ point.date }}"></progress><strong>{{ point.score|default_if_none:"—" }}</strong></li>{% endfor %}</ol>
+  </details>
+  <details class="forecast-details">
+    <summary>{% bt "Как считается прогноз" %}</summary>
+    <p>{% bt "Свежие результаты влияют сильнее старых. Для каждого теста учитываются последние три попытки; повторения не увеличивают объём независимых данных. Контесты дают дополнительный сигнал, а проверенные полные пробники имеют наибольший вес." %}</p>
+    <p>{% bt "По неизвестным темам модель использует нейтральное допущение 50% с широким диапазоном неопределённости. Это не означает, что тема освоена. При недостатке данных общий балл скрыт." %}</p>
+    <p>{% bt "Чтение материалов и прохождение курса сами по себе не добавляют баллы. Широкая связь раздела с темой ЕНТ может покрывать её лишь частично." %}</p>
+    <p>{% if forecast.equal_weights %}{% bt "Все темы имеют одинаковый модельный вес: официальная спецификация не задаёт баллы каждой темы." %}{% else %}{% bt "Используются веса, заданные куратором. Они являются допущением модели." %}{% endif %}</p>
+    {% if forecast.weight_note %}<p>{{ forecast.weight_note }}</p>{% endif %}
+    <p>{% bt "Пробники уточняют общий балл; без ответов по темам они не изменяют разбор освоения тем." %}</p>
+  </details>
+  {% endif %}
+</section>
