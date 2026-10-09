@@ -1,0 +1,26 @@
+{% load static %}
+<!doctype html>
+<html lang="{{ bootstrap.language }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>BYTE · {% if bootstrap.language == 'kk' %}Информатикадан ҰБТ-ға дайындық{% else %}Подготовка к ЕНТ по информатике{% endif %}</title>
+  <meta name="description" content="BYTE — Python, SQL, C++, HTML/CSS · ЕНТ / ҰБТ">
+  <script>try { document.documentElement.classList.toggle('light-theme', localStorage.getItem('byte-theme') === 'light'); } catch (_) {}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/theme.css' %}">
+  <link rel="stylesheet" href="{% static 'css/forecast.css' %}">
+  {% for css in react_css %}<link rel="stylesheet" href="{{ css }}">{% endfor %}
+</head>
+<body class="{% if bootstrap.user %}app-body{% else %}auth-shell{% endif %}">
+  <div id="root"></div>
+  <noscript>{% if bootstrap.language == 'kk' %}BYTE үшін браузерде JavaScript қосыңыз.{% else %}Для работы BYTE включите JavaScript в браузере.{% endif %}</noscript>
+  {{ bootstrap_script }}
+  <script type="module" src="{{ react_js }}"></script>
+</body>
+</html>
