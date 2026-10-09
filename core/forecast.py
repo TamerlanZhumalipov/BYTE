@@ -155,6 +155,10 @@ def get_forecast(user, *, language="ru", year=None, now=None):
     delta = data["score"] - previous if previous is not None and data["score"] is not None else None
     history.append({"date": now.date().isoformat(), "score": data["score"]})
     recommendations = sorted(data["topics"], key=lambda r: (r["mastery"] is not None, r["mastery"] or 0, r["code"]))[:3]
+    from .textbooks import for_topics
+    reading = for_topics([r["id"] for r in recommendations], language)
+    for row in recommendations:
+        row["reading"] = reading[row["id"]]
     note = (spec.forecast_weight_note_kk or spec.forecast_weight_note) if language == "kk" else spec.forecast_weight_note
     return {**base, **data, "specification_id": spec.pk, "year": spec.year,
             "max_score": spec.max_score, "topic_count": len(topics), "delta": delta,

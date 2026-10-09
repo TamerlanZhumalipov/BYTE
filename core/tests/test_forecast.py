@@ -180,7 +180,7 @@ class ForecastTests(TestCase):
     def test_query_count_bounded_with_evidence(self):
         for i in range(13):
             self.attempt(i)
-        with self.assertNumQueries(6):
+        with self.assertNumQueries(8):
             self.forecast()
 
     def test_two_recent_mocks_allow_medium_reliability(self):
@@ -204,7 +204,7 @@ class ForecastTests(TestCase):
         for account_obj, verdict, passed in [(account, "OK", 10), (account, "WA", 0), (account, "PENDING", 10), (foreign, "OK", 10)]:
             sub = Submission.objects.create(account=account_obj, task=task, code="", language="python", verdict=verdict, passed=passed, total=10)
             Submission.objects.filter(pk=sub.pk).update(created_at=self.now)
-        with self.assertNumQueries(7):
+        with self.assertNumQueries(9):
             data = self.forecast()
         self.assertEqual(data["contest_count"], 1)
         self.assertLess(data["topics"][0]["mastery"], 50)

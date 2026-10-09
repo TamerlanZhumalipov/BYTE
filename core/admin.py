@@ -211,3 +211,29 @@ class ENTPracticeResultAdmin(admin.ModelAdmin):
     list_filter = ("specification", "verified")
     search_fields = ("user__username", "source", "reference")
     autocomplete_fields = ("user",)
+
+
+from .models import Textbook, TextbookReference
+
+
+class TextbookReferenceInline(admin.TabularInline):
+    model = TextbookReference
+    fields = ("paragraph", "title", "page_start", "pdf_page", "verified", "verification_note")
+    extra = 0
+    show_change_link = True
+
+
+@admin.register(Textbook)
+class TextbookAdmin(admin.ModelAdmin):
+    list_display = ("title", "grade", "language", "publisher", "year", "is_active")
+    list_filter = ("language", "grade", "is_active")
+    search_fields = ("title", "authors", "isbn")
+    inlines = [TextbookReferenceInline]
+
+
+@admin.register(TextbookReference)
+class TextbookReferenceAdmin(admin.ModelAdmin):
+    list_display = ("paragraph", "title", "textbook", "page_start", "verified")
+    list_filter = ("verified", "textbook")
+    search_fields = ("title", "keywords", "textbook__title")
+    filter_horizontal = ("sections", "ent_topics")
