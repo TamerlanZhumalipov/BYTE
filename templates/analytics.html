@@ -4,13 +4,14 @@
 {% block title %}{% bt "Аналитика" %}{% endblock %}
 
 {% block body %}
+<link rel="stylesheet" href="{% static 'css/forecast.css' %}?v=1">
 <main class="analytics-page">
   <div class="analytics-shell">
     <header class="analytics-head">
       <div>
         <span class="kicker">{% bt "ваш прогресс" %}</span>
         <h1>{% bt "Аналитика обучения" %}</h1>
-        <p>{% bt "Результаты по основным темам, динамика тестов и прогноз итогового уровня при текущем темпе." %}</p>
+        <p>{% bt "Результаты обучения и оценка готовности к ЕНТ сегодня." %}</p>
       </div>
       <a class="btn btn-ghost" href="{% url 'dashboard' %}">{% bt "Продолжить обучение" %}</a>
     </header>
@@ -27,12 +28,14 @@
         <strong>{% if average_score is not None %}{{ average_score }}%{% else %}—{% endif %}</strong>
         <small>{% bt "по темам, где уже были попытки" %}</small>
       </article>
-      <article class="analytics-card analytics-forecast">
-        <span>{% bt "Прогноз" %}</span>
-        <strong>{% if forecast_score is not None %}{{ forecast_score }}%{% else %}—{% endif %}</strong>
-        <small>{{ trend }}</small>
+      <article class="analytics-card">
+        <span>{% bt "Темы ЕНТ с результатами" %}</span>
+        <strong>{{ forecast.assessed_topics|default:0 }} / {{ forecast.topic_count|default:0 }}</strong>
+        <small>{% bt "по связанным тестам и контестам" %}</small>
       </article>
     </section>
+
+    {% include "includes/forecast.html" %}
 
     <section class="analytics-section">
       <div class="section-head compact">
@@ -83,7 +86,7 @@
       </div>
     </section>
 
-    <p class="analytics-note">{% bt "Прогноз — ориентир по текущим результатам и их тренду, а не официальный прогноз баллов ЕНТ." %}</p>
+
   </div>
 </main>
 {% endblock %}
