@@ -234,7 +234,11 @@ select:focus-visible {
   font-size: 20px;
 }
 
-.brand img { height: 30px; width: auto; }
+.brand-logo { display: block; height: 34px; width: auto; }
+.brand-logo-light { display: none; }
+html.light-theme .brand-logo-dark { display: none; }
+html.light-theme .brand-logo-light { display: block; }
+.auth-brand .brand-logo { height: 52px; }
 
 .main-nav {
   display: flex;
