@@ -16,7 +16,7 @@
 </head>
 <body>
 <header class="site-header"><div class="container">
-<a class="brand" href="{% url 'index' %}"><img class="brand-logo brand-logo-dark" src="{% static 'img/byte-logo-sh2-dark.svg' %}" alt="BYTE"><img class="brand-logo brand-logo-light" src="{% static 'img/byte-logo-sh2-light.svg' %}" alt="" aria-hidden="true"></a>
+<a class="brand" href="{% url 'index' %}"><img class="brand-logo brand-logo-dark" src="{% static 'img/byte-logo-sh2-dark.svg' %}" alt="BYTE"><img class="brand-logo brand-logo-light" src="{% static 'img/byte-logo-sh2-light.svg' %}" alt="BYTE"></a>
 <nav class="main-nav">
 <a href="#tracks">{% bt "Языки" %}</a>
 <a href="#ent">ҰБТ</a>
@@ -105,6 +105,6 @@
 <form class="lead-form" data-signup-form action="{% url 'lead_create' %}" method="post">{% csrf_token %}<input type="text" name="name" placeholder="{% bt 'Имя' %}" required><input type="text" name="phone" placeholder="{% bt 'Телефон или Telegram' %}" required><select name="plan"><option value="">{% bt "Выберите пакет" %}</option><option value="start">Старт</option><option value="mentor">Ментор</option></select><button class="btn btn-primary" type="submit">{% bt "Отправить заявку" %}</button><p class="form-status" data-form-status></p></form>
 </div></div></section>
 
-<footer><div class="container"><a class="brand" href="{% url 'index' %}"><img class="brand-logo brand-logo-dark" src="{% static 'img/byte-logo-sh2-dark.svg' %}" alt="BYTE"><img class="brand-logo brand-logo-light" src="{% static 'img/byte-logo-sh2-light.svg' %}" alt="" aria-hidden="true"></a><p>{% if site_lang == "kk" %}Информатика және бағдарламалау бойынша ҰБТ-ға дайындық.{% else %}Подготовка к ЕНТ по информатике и программированию.{% endif %}</p></div></footer>
+<footer><div class="container"><a class="brand" href="{% url 'index' %}"><img class="brand-logo brand-logo-dark" src="{% static 'img/byte-logo-sh2-dark.svg' %}" alt="BYTE"><img class="brand-logo brand-logo-light" src="{% static 'img/byte-logo-sh2-light.svg' %}" alt="BYTE"></a><p>{% if site_lang == "kk" %}Информатика және бағдарламалау бойынша ҰБТ-ға дайындық.{% else %}Подготовка к ЕНТ по информатике и программированию.{% endif %}</p></div></footer>
 <script src="{% static 'js/main.js' %}"></script><script src="{% static 'js/motion.js' %}"></script>
 </body></html>
