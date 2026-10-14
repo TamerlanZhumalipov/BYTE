@@ -20,7 +20,7 @@ a,button,input,select,textarea,.btn,.theme-button,.app-tab,.tree-link,.tree-summ
 .btn:active,.theme-button:active,.ai-fab:active,.app-tab:active,.cx-tab:active{transform:translateY(0) scale(.98)}
 
 .brand img{transition:transform var(--motion-base) var(--motion-ease),filter var(--motion-base) var(--motion-ease)}
-.brand:hover img{transform:rotate(-4deg) scale(1.05)}
+.brand:hover img{transform:scale(1.03)}
 .brand:hover{filter:saturate(1.08)}
 
 .main-nav a,.app-tab{position:relative}
