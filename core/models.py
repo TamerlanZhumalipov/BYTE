@@ -23,6 +23,11 @@ class Lead(models.Model):
     phone = models.CharField("Телефон", max_length=32)
     plan = models.CharField("Пакет", max_length=10, choices=PLAN_CHOICES, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Historical leads have no consent evidence; never backfill it.
+    consent_at = models.DateTimeField("Дата согласия", null=True, blank=True, editable=False)
+    consent_version = models.CharField("Версия согласия", max_length=32, blank=True, editable=False)
+    consent_language = models.CharField("Язык согласия", max_length=2, blank=True, editable=False)
+    consent_text = models.TextField("Текст согласия", blank=True, editable=False)
 
     class Meta:
         ordering = ["-created_at"]

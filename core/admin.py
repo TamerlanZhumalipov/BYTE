@@ -9,9 +9,10 @@ from .models import (
 
 @admin.register(Lead)
 class LeadAdmin(admin.ModelAdmin):
-    list_display = ("name", "phone", "plan", "created_at")
+    list_display = ("name", "phone", "plan", "created_at", "consent_at", "consent_version")
     list_filter = ("plan",)
     search_fields = ("name", "phone")
+    readonly_fields = ("created_at", "consent_at", "consent_version", "consent_language", "consent_text")
 
 
 @admin.register(Section)

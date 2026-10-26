@@ -1,0 +1,6 @@
+<footer class="legal-footer"><div class="container"><nav aria-label="{% if site_lang == 'kk' %}Құқықтық ақпарат{% else %}Правовая информация{% endif %}">
+<a href="{% url 'privacy' %}">{% if site_lang == 'kk' %}Құпиялық саясаты{% else %}Политика конфиденциальности{% endif %}</a>
+<a href="{% url 'terms' %}">{% if site_lang == 'kk' %}Пайдалану шарттары{% else %}Условия использования{% endif %}</a>
+<a href="{% url 'cookies' %}">{% if site_lang == 'kk' %}Cookie саясаты{% else %}Политика cookie{% endif %}</a>
+<button type="button" class="legal-link" data-cookie-settings hidden>{% if site_lang == 'kk' %}Cookie параметрлері{% else %}Настройки cookie{% endif %}</button>
+</nav></div></footer>

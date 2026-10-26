@@ -43,6 +43,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "core.context_processors.site_language",
+                "core.legal.legal_context",
             ],
         },
     },
@@ -109,3 +110,11 @@ AI_MAX_TOKENS = int(os.environ.get("AI_MAX_TOKENS", "700"))
 AI_HISTORY_MESSAGES = 8    # сколько последних реплик диалога передаём модели как контекст
 AI_COOLDOWN_SECONDS = 4    # минимальный промежуток между вопросами одного ученика
 AI_DAILY_LIMIT = 200       # вопросов в сутки на одного ученика (защита от случайных расходов)
+
+# Operator identifier is configured on the server, never committed to Git.
+BYTE_LEGAL = {
+    "operator": os.environ.get("BYTE_LEGAL_OPERATOR", "Жумалипов Тамерлан Айдарович").strip(),
+    "identifier": os.environ.get("BYTE_LEGAL_IDENTIFIER", "").strip(),
+    "contact": os.environ.get("BYTE_LEGAL_CONTACT", "tamush30@gmail.com").strip(),
+    "location": os.environ.get("BYTE_LEGAL_LOCATION", "Казахстан").strip(),
+}

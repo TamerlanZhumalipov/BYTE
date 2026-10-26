@@ -1,7 +1,8 @@
 (() => {
   const key = 'byte-theme';
   const root = document.documentElement;
-  const saved = localStorage.getItem(key);
+  let saved;
+  try { saved = localStorage.getItem(key); } catch (_) { /* Use default theme. */ }
   if (saved === 'light') root.classList.add('light-theme');
 
   function syncButton() {
@@ -17,7 +18,7 @@
     syncButton();
     document.getElementById('themeButton')?.addEventListener('click', () => {
       root.classList.toggle('light-theme');
-      localStorage.setItem(key, root.classList.contains('light-theme') ? 'light' : 'dark');
+      try { localStorage.setItem(key, root.classList.contains('light-theme') ? 'light' : 'dark'); } catch (_) { /* This page only. */ }
       syncButton();
     });
   });

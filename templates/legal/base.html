@@ -1,0 +1,29 @@
+{% load static byte_i18n %}
+<!DOCTYPE html>
+<html lang="{{ site_lang }}">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{% endblock %} — BYTE</title>
+<script src="{% static 'js/theme.js' %}"></script>
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+<link rel="stylesheet" href="{% static 'css/theme.css' %}">
+<link rel="stylesheet" href="{% static 'css/legal.css' %}">
+</head>
+<body>
+<header class="site-header"><div class="container">
+<a class="brand" href="{% url 'index' %}" aria-label="BYTE"><img class="brand-logo brand-logo-dark" src="{% static 'img/byte-logo-sh2-dark.svg' %}" alt="BYTE"><img class="brand-logo brand-logo-light" src="{% static 'img/byte-logo-sh2-light.svg' %}" alt="BYTE"></a>
+<div class="header-actions">
+<form class="lang-switch" method="post" action="{% url 'set_language' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="lang-option{% if site_lang == 'ru' %} is-active{% endif %}" name="language" value="ru">RU</button><button class="lang-option{% if site_lang == 'kk' %} is-active{% endif %}" name="language" value="kk">KZ</button></form>
+<button class="theme-button" id="themeButton" type="button" aria-label="{% bt 'Светлая тема' %}">☀</button>
+<a class="btn btn-ghost" href="{% url 'index' %}">{% if site_lang == 'kk' %}Басты бет{% else %}На главную{% endif %}</a>
+</div></div></header>
+<main class="legal-page container">
+<p class="kicker">BYTE · {% if site_lang == 'kk' %}Құқықтық ақпарат{% else %}Правовая информация{% endif %}</p>
+<h1>{% block heading %}{% endblock %}</h1>
+<p class="legal-meta">{% if site_lang == 'kk' %}Редакция: 26 қазан 2026{% else %}Редакция: 26 октября 2026{% endif %} · {{ legal_version }}</p>
+<nav class="legal-tabs" aria-label="{% if site_lang == 'kk' %}Құжаттар{% else %}Документы{% endif %}"><a href="{% url 'privacy' %}">{% if site_lang == 'kk' %}Құпиялық{% else %}Конфиденциальность{% endif %}</a><a href="{% url 'terms' %}">{% if site_lang == 'kk' %}Пайдалану шарттары{% else %}Условия использования{% endif %}</a><a href="{% url 'cookies' %}">Cookie</a></nav>
+<article class="legal-copy">{% block content %}{% endblock %}</article>
+</main>
+{% include 'includes/legal_footer.html' %}
+{% include 'includes/cookie_preferences.html' %}
+</body></html>

@@ -8,13 +8,11 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>{% block title %}Кабинет{% endblock %} — BYTE</title>
 <script src="{% static 'js/theme.js' %}"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/style.css' %}">
 <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20261005-learning1">
 <link rel="stylesheet" href="{% static 'css/theme.css' %}">
 <link rel="stylesheet" href="{% static 'css/motion.css' %}?v=20261005-learning1">
+<link rel="stylesheet" href="{% static 'css/legal.css' %}">
 </head>
 <body class="app-body">
 <header class="app-header"><div class="app-header-inner">
@@ -26,4 +24,6 @@
 {% block floating_ui %}{% endblock %}
 {% block scripts %}{% endblock %}
 <script src="{% static 'js/motion.js' %}?v=20261005-learning1"></script>
+{% include 'includes/legal_footer.html' %}
+{% include 'includes/cookie_preferences.html' %}
 </body></html>
