@@ -1,0 +1,19 @@
+.legal-page{max-width:900px;padding-top:64px;padding-bottom:72px}
+.legal-page h1{font-size:clamp(30px,5vw,48px);line-height:1.15;margin:14px 0 20px;overflow-wrap:anywhere}
+.legal-meta{font-size:13px}.legal-tabs{display:flex;flex-wrap:wrap;gap:12px 24px;margin:28px 0;padding:18px 0;border-block:1px solid var(--border)}
+.legal-copy h2{font-size:23px;margin:36px 0 14px;scroll-margin-top:100px}.legal-copy p{margin:12px 0;line-height:1.8}.legal-copy li{margin:10px 0;color:var(--text-muted)}
+.legal-copy a,.cookie-panel a,.consent-label a{text-decoration:underline;text-underline-offset:3px;color:var(--text)}
+.legal-note{padding:16px;border:1px solid var(--border);border-radius:12px;margin-top:20px!important}
+.legal-table{overflow-x:auto}.legal-table table{width:100%;border-collapse:collapse;margin:20px 0;font-size:14px}.legal-table th,.legal-table td{padding:14px;text-align:left;border:1px solid var(--border);vertical-align:top}.legal-table th{background:var(--bg-elevated)}
+.legal-footer{border-top:1px solid var(--border);padding:24px 0;background:var(--bg);position:relative}.legal-footer nav{display:flex;flex-wrap:wrap;gap:12px 24px;font-size:13px;color:var(--text-muted)}
+.legal-link{font:inherit;color:inherit;background:none;border:0;padding:0;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.cookie-panel{position:fixed;z-index:10000;bottom:20px;left:20px;width:min(580px,calc(100% - 40px));max-height:calc(100dvh - 40px);overflow:auto;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:18px;box-shadow:0 12px 48px #0005;padding:24px}.cookie-panel h2{font-size:20px;margin-bottom:10px}.cookie-panel p{font-size:14px;line-height:1.65}.cookie-actions{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 10px}.cookie-actions .btn{white-space:normal;text-align:center;flex:1 1 190px}.cookie-panel [data-cookie-current]:empty{display:none}
+[hidden]{display:none!important}
+.lead-form .consent-label{display:flex;align-items:flex-start;gap:12px;font-size:13px;line-height:1.6;color:var(--text-muted)}
+.lead-form .consent-label input[type=checkbox]{appearance:auto;width:19px;height:19px;min-width:19px;padding:0;margin:3px 0 0;accent-color:var(--blue)}
+.lead-form .field-label{font-size:13px;color:var(--text-muted)}.lead-form .consent-details{font-size:13px;line-height:1.7;color:var(--text-muted)}.consent-details summary{cursor:pointer;text-decoration:underline}.consent-details p{margin:12px 0}.lead-form button:disabled{opacity:.55;cursor:not-allowed}
+.media-placeholder{min-height:240px;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:24px;text-align:center}.media-placeholder p{max-width:540px}.media-placeholder .btn{white-space:normal}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--cyan);outline-offset:4px}
+@media(max-width:600px){.legal-page{padding-top:36px}.cookie-panel{left:12px;bottom:12px;width:calc(100% - 24px);padding:18px}.cookie-actions{display:grid}.legal-tabs{gap:16px}.media-placeholder{font-size:13px;min-height:210px}.video-frame:has(.media-placeholder:not([hidden])){aspect-ratio:auto}}
+/* Labels, full consent and inputs stay in reading order on every width. */
+.lead-form{grid-template-columns:1fr}.lead-form>*{grid-column:1/-1}

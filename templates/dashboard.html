@@ -48,8 +48,12 @@
             <div><span class="lesson-format">01 · {% bt "видео" %}</span><h2>{% bt "Видеоразбор" %}</h2></div>
             <a class="video-external" href="{{ current.display_video_url }}" target="_blank" rel="noopener">{% bt "Открыть отдельно ↗" %}</a>
           </div>
-          <div class="video-frame">
-            <iframe src="{{ current.display_video_embed_url }}" title="{{ current.display_title }}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+          <div class="video-frame" data-external-video="{{ current.display_video_embed_url }}" data-video-title="{{ current.display_title }}">
+            <div class="media-placeholder" data-media-placeholder>
+              <p>{% if site_lang == 'kk' %}Видео сыртқы провайдерден жүктеледі. Ол құрылғы деректерін алып, cookie қолдануы мүмкін. Жалғастыру үшін cookie параметрлерінде сыртқы видеоға рұқсат беріңіз.{% else %}Видео загружается у внешнего провайдера. Он может получать данные устройства и использовать cookie. Для просмотра разрешите внешние видео в настройках cookie.{% endif %}</p>
+              <button class="btn btn-ghost" type="button" data-cookie-settings hidden>{% if site_lang == 'kk' %}Видео параметрлері{% else %}Настройки видео{% endif %}</button>
+              <noscript><p>{% if site_lang == 'kk' %}JavaScript қосыңыз немесе видеоны бөлек ашыңыз.{% else %}Включите JavaScript или откройте видео отдельно.{% endif %}</p></noscript>
+            </div>
           </div>
         </section>
         {% endif %}

@@ -16,6 +16,7 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.cache import never_cache
 
 from .forms import LeadForm
+from .legal import LEGAL_VERSION, consent_snapshot
 from .forecast import get_forecast
 from .textbooks import book_reply
 from .judge import LANGUAGES, MAX_CODE_BYTES, run_submission
@@ -63,7 +64,7 @@ def lead_create(request):
     if not data.get("phone") and data.get("contact"):
         data["phone"] = data.get("contact", "")
 
-    form = LeadForm(data)
+    form = LeadForm(data, language=lang)
     if not form.is_valid():
         errors = {
             field: [str(message) for message in messages]
@@ -72,7 +73,12 @@ def lead_create(request):
         return JsonResponse({"ok": False, "errors": errors}, status=400)
 
     try:
-        lead = form.save()
+        lead = form.save(commit=False)
+        lead.consent_at = timezone.now()
+        lead.consent_version = LEGAL_VERSION
+        lead.consent_language = lang
+        lead.consent_text = consent_snapshot(request)
+        lead.save()
     except IntegrityError:
         logger.exception("Не удалось сохранить заявку")
         return JsonResponse(

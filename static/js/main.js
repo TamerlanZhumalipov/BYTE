@@ -168,6 +168,7 @@ function initSignupForm() {
   const form = document.querySelector('[data-signup-form]');
   if (!form) return;
 
+  const kk = document.documentElement.lang === 'kk';
   const status = form.querySelector('[data-form-status]');
   const button = form.querySelector('button[type="submit"]');
 
@@ -179,7 +180,7 @@ function initSignupForm() {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (button?.disabled) return;
+    if (button?.disabled || !form.reportValidity()) return;
 
     const originalText = button ? button.textContent : '';
     showStatus('');
@@ -188,7 +189,7 @@ function initSignupForm() {
       button.classList.remove('is-success');
       button.classList.add('is-loading');
       button.disabled = true;
-      button.textContent = 'Отправляем…';
+      button.textContent = kk ? 'Жіберілуде…' : 'Отправляем…';
     }
 
     try {
@@ -211,7 +212,7 @@ function initSignupForm() {
       if (button) {
         button.classList.remove('is-loading');
         button.classList.add('is-success');
-        button.textContent = 'Заявка отправлена ✓';
+        button.textContent = kk ? 'Өтінім жіберілді ✓' : 'Заявка отправлена ✓';
       }
       showStatus(body.message || 'Мы свяжемся с вами в течение дня.', true);
       form.reset();
@@ -229,7 +230,7 @@ function initSignupForm() {
         button.textContent = originalText;
         button.disabled = false;
       }
-      showStatus(error.message || 'Не получилось отправить заявку. Попробуйте ещё раз.');
+      showStatus(error.message || (kk ? 'Өтінім жіберілмеді. Қайта көріңіз.' : 'Не получилось отправить заявку. Попробуйте ещё раз.'));
     }
   });
 }

@@ -1,0 +1,9 @@
+{% load static %}
+<section class="cookie-panel" data-cookie-panel data-version="{{ legal_version }}" hidden aria-labelledby="cookie-title" tabindex="-1">
+<h2 id="cookie-title">{% if site_lang == 'kk' %}Сіздің құпиялығыңыз{% else %}Ваша конфиденциальность{% endif %}</h2>
+<p>{% if site_lang == 'kk' %}BYTE кіру мен қауіпсіздік үшін қажетті cookie қолданады. Сыртқы видеолар өшірулі: рұқсат берсеңіз, провайдерлер құрылғы деректерін алып, cookie қолдануы мүмкін, соның ішінде шетелде.{% else %}BYTE использует необходимые cookie для входа и безопасности. Внешние видео отключены: с вашего разрешения их провайдеры смогут получать данные устройства и использовать cookie, в том числе за рубежом.{% endif %} <a href="{% url 'cookies' %}">{% if site_lang == 'kk' %}Толығырақ{% else %}Подробнее{% endif %}</a></p>
+<p data-cookie-current aria-live="polite"></p>
+<div class="cookie-actions"><button type="button" class="btn btn-ghost" data-cookie-choice="necessary">{% if site_lang == 'kk' %}Тек қажеттілері{% else %}Только необходимые{% endif %}</button><button type="button" class="btn btn-ghost" data-cookie-choice="media">{% if site_lang == 'kk' %}Сыртқы видеоға рұқсат беру{% else %}Разрешить внешние видео{% endif %}</button></div>
+<button type="button" class="legal-link" data-cookie-close hidden>{% if site_lang == 'kk' %}Жабу{% else %}Закрыть{% endif %}</button>
+</section>
+<script src="{% static 'js/privacy.js' %}" defer></script>

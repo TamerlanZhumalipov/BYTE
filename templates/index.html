@@ -7,12 +7,10 @@
 <title>{% if site_lang == "kk" %}BYTE — информатикадан ҰБТ-ға дайындық курсы{% else %}BYTE — курс подготовки к ЕНТ по информатике{% endif %}</title>
 <meta name="description" content="{% if site_lang == 'kk' %}BYTE — информатикадан ҰБТ-ға дайындық, Python, C++, SQL, HTML/CSS және лайв-кодинг контесттері.{% else %}BYTE — курс по информатике: подготовка к ЕНТ, Python, C++, SQL, HTML/CSS и еженедельные лайв-кодинг контесты.{% endif %}">
 <script src="{% static 'js/theme.js' %}"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/style.css' %}">
 <link rel="stylesheet" href="{% static 'css/theme.css' %}">
 <link rel="stylesheet" href="{% static 'css/motion.css' %}">
+<link rel="stylesheet" href="{% static 'css/legal.css' %}">
 </head>
 <body>
 <header class="site-header"><div class="container">
@@ -102,9 +100,25 @@
 
 <section id="cta"><div class="container"><div class="cta-box">
 <div><span class="kicker">{% bt "набор открыт" %}</span><h2>{% bt "Оставьте заявку — расскажем, с чего начать" %}</h2><p>{% if site_lang == "kk" %}Форманы толтырыңыз, біз сізбен көрсетілген байланыс арқылы хабарласамыз.{% else %}Заполните форму, и мы свяжемся с вами по выбранному контакту.{% endif %}</p></div>
-<form class="lead-form" data-signup-form action="{% url 'lead_create' %}" method="post">{% csrf_token %}<input type="text" name="name" placeholder="{% bt 'Имя' %}" required><input type="text" name="phone" placeholder="{% bt 'Телефон или Telegram' %}" required><select name="plan"><option value="">{% bt "Выберите пакет" %}</option><option value="start">Старт</option><option value="mentor">Ментор</option></select><button class="btn btn-primary" type="submit">{% bt "Отправить заявку" %}</button><p class="form-status" data-form-status></p></form>
+<form class="lead-form" data-signup-form action="{% url 'lead_create' %}" method="post">
+{% csrf_token %}
+<label class="field-label" for="lead-name">{% if site_lang == 'kk' %}Тегі, аты, әкесінің аты (бар болса){% else %}Фамилия, имя, отчество (при наличии){% endif %}</label>
+<input id="lead-name" type="text" name="name" maxlength="120" autocomplete="name" required>
+<label class="field-label" for="lead-phone">{% bt 'Телефон или Telegram' %}</label>
+<input id="lead-phone" type="text" name="phone" maxlength="32" required>
+<label class="field-label" for="lead-plan">{% bt "Выберите пакет" %}</label>
+<select id="lead-plan" name="plan"><option value="">{% bt "Выберите пакет" %}</option><option value="start">Старт</option><option value="mentor">Ментор</option></select>
+<input type="hidden" name="consent_version" value="{{ legal_version }}">
+<label class="consent-label"><input type="checkbox" name="privacy_consent" value="on" required><span>{% if site_lang == 'kk' %}Өтінім бойынша байланысу үшін дербес деректерімді жинауға және өңдеуге <a href="{% url 'privacy' %}#lead-consent" target="_blank" rel="noopener">келісім беремін</a>. <a href="{% url 'privacy' %}" target="_blank" rel="noopener">Құпиялық саясатымен</a> таныстым.{% else %}Даю <a href="{% url 'privacy' %}#lead-consent" target="_blank" rel="noopener">согласие на сбор и обработку моих персональных данных</a> для связи по заявке. Ознакомился с <a href="{% url 'privacy' %}" target="_blank" rel="noopener">политикой конфиденциальности</a>.{% endif %}</span></label>
+<details class="consent-details"><summary>{% if site_lang == 'kk' %}Келісімнің толық мәтіні{% else %}Полный текст согласия{% endif %}</summary>{% include 'legal/lead_consent.html' %}</details>
+<p class="consent-details">{% if site_lang == 'kk' %}18 жасқа толмасаңыз, ата-анаңыздан өз байланысын қалдыруын сұраңыз. Өтінім төлемге міндеттемейді.{% else %}Если вам нет 18 лет, попросите родителя оставить свои контакты. Заявка не обязывает к оплате.{% endif %}</p>
+<button class="btn btn-primary" type="submit">{% bt "Отправить заявку" %}</button>
+<p class="form-status" data-form-status role="status" aria-live="polite"></p>
+</form>
 </div></div></section>
 
 <footer><div class="container"><a class="brand" href="{% url 'index' %}"><img class="brand-logo brand-logo-dark" src="{% static 'img/byte-logo-sh2-dark.svg' %}" alt="BYTE"><img class="brand-logo brand-logo-light" src="{% static 'img/byte-logo-sh2-light.svg' %}" alt="BYTE"></a><p>{% if site_lang == "kk" %}Информатика және бағдарламалау бойынша ҰБТ-ға дайындық.{% else %}Подготовка к ЕНТ по информатике и программированию.{% endif %}</p></div></footer>
 <script src="{% static 'js/main.js' %}"></script><script src="{% static 'js/motion.js' %}"></script>
+{% include 'includes/legal_footer.html' %}
+{% include 'includes/cookie_preferences.html' %}
 </body></html>

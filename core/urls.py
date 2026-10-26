@@ -1,9 +1,12 @@
 from django.urls import path
 
-from . import views
+from . import views, legal
 from .ent_views import ent_specification, ent_forecast
 
 urlpatterns = [
+    path("privacy/", legal.privacy, name="privacy"),
+    path("terms/", legal.terms, name="terms"),
+    path("cookies/", legal.cookies, name="cookies"),
     path("api/ent/forecast/", ent_forecast, name="ent_forecast"),
     path("api/ent/specifications/<int:year>/", ent_specification, name="ent_specification"),
     path("language/", views.set_language, name="set_language"),
