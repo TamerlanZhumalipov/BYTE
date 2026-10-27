@@ -216,6 +216,16 @@ class QuizAttempt(models.Model):
 # ---------------------------------------------------------------------------
 
 class Contest(models.Model):
+    KINDS = [("programming", "Программирование · Python / C++"), ("sql", "SQL · SQLite")]
+    kind = models.CharField("Тип контеста", max_length=16, choices=KINDS, default="programming")
+
+    def clean(self):
+        super().clean()
+        if self.pk:
+            old = type(self).objects.filter(pk=self.pk).values_list("kind", flat=True).first()
+            if old and old != self.kind and self.tasks.exists():
+                raise ValidationError({"kind": "Тип контеста с задачами менять нельзя. Создайте отдельный контест."})
+
     title = models.CharField("Название", max_length=200)
     starts_at = models.DateTimeField("Начало")
     duration_minutes = models.PositiveIntegerField("Длительность, минут", default=90)
@@ -243,6 +253,37 @@ class Contest(models.Model):
 
 
 class ContestTask(models.Model):
+    title_kk = models.CharField("Название (қазақша)", max_length=200, blank=True)
+    statement_kk = models.TextField("Условие (қазақша, HTML)", blank=True)
+    sql_sample = models.JSONField("SQL: открытые таблицы", default=dict, blank=True,
+        help_text='JSON: {"tables": [{"name": "students", "columns": [["id", "INTEGER"]], "rows": [[1]]}]}')
+    sql_reference = models.TextField("SQL: эталонный запрос (скрыт от учеников)", blank=True)
+    sql_ordered = models.BooleanField("SQL: учитывать порядок строк", default=False,
+        help_text="Включайте, только если условие требует сортировку. Порядок столбцов учитывается всегда.")
+
+    def clean(self):
+        super().clean()
+        if not self.contest_id and "contest" not in self._state.fields_cache:
+            return
+        if self.pk:
+            old = type(self).objects.select_related("contest").filter(pk=self.pk).first()
+            if old and old.contest.kind != self.contest.kind:
+                raise ValidationError("Нельзя переносить задачу между SQL и программированием.")
+        if self.contest.kind == "sql":
+            from .sql_engine import validate_fixture
+            try:
+                validate_fixture(self.sql_sample)
+            except (ValueError, TypeError) as exc:
+                raise ValidationError({"sql_sample": str(exc)})
+            if not self.sql_reference.strip():
+                raise ValidationError({"sql_reference": "Нужен эталонный SQL-запрос."})
+            if len(self.sql_reference.encode()) > 65536:
+                raise ValidationError({"sql_reference": "Максимум 64 КБ."})
+            if not 0 < self.time_limit <= 3:
+                raise ValidationError({"time_limit": "Для SQL: больше 0 и не больше 3 секунд."})
+        elif self.sql_sample or self.sql_reference or self.sql_ordered:
+            raise ValidationError("SQL-поля доступны только в SQL-контесте.")
+
     ent_topics = models.ManyToManyField("ENTTopic", blank=True, related_name="contest_tasks", verbose_name="Темы ЕНТ")
     contest = models.ForeignKey(Contest, verbose_name="Контест", related_name="tasks", on_delete=models.CASCADE)
     order = models.PositiveSmallIntegerField("Номер", default=1)
@@ -264,7 +305,24 @@ class TaskTest(models.Model):
     task = models.ForeignKey(ContestTask, verbose_name="Задача", related_name="tests", on_delete=models.CASCADE)
     order = models.PositiveSmallIntegerField("Номер", default=0)
     input_data = models.TextField("Входные данные", blank=True)
-    expected_output = models.TextField("Правильный ответ")
+    expected_output = models.TextField("Правильный ответ", blank=True)
+    sql_fixture = models.JSONField("SQL: скрытые таблицы", default=dict, blank=True)
+
+    def clean(self):
+        super().clean()
+        if not self.task_id:
+            return
+        if self.task.contest.kind == "sql":
+            from .sql_engine import schema_signature
+            if self.input_data or self.expected_output:
+                raise ValidationError("В SQL-тесте заполните только скрытые таблицы, без stdin/stdout.")
+            try:
+                if schema_signature(self.sql_fixture) != schema_signature(self.task.sql_sample):
+                    raise ValueError("Схема должна совпадать с открытым набором.")
+            except (ValueError, TypeError) as exc:
+                raise ValidationError({"sql_fixture": str(exc)})
+        elif self.sql_fixture:
+            raise ValidationError({"sql_fixture": "SQL-набор недоступен в контесте программирования."})
 
     class Meta:
         ordering = ["order", "id"]
@@ -282,6 +340,7 @@ class ContestAccount(models.Model):
     """
     user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="contest_accounts", verbose_name="Ученик BYTE", help_text="Назначается куратором. Совпадение имени или логина не подтверждает владельца.")
     contest = models.ForeignKey(Contest, verbose_name="Контест", related_name="accounts", on_delete=models.CASCADE)
+    sql_busy_until = models.DateTimeField(null=True, blank=True, editable=False)
     full_name = models.CharField("Имя участника", max_length=150, blank=True)
     login = models.CharField("Логин контеста", max_length=50, unique=True)
     password_hash = models.CharField(max_length=256, editable=False)
@@ -311,7 +370,7 @@ class Submission(models.Model):
         ("RE", "Ошибка выполнения"),
         ("CE", "Ошибка компиляции"),
     ]
-    LANGUAGES = [("python", "Python"), ("cpp", "C++")]
+    LANGUAGES = [("python", "Python"), ("cpp", "C++"), ("sql", "SQL")]
 
     account = models.ForeignKey(ContestAccount, verbose_name="Участник", related_name="submissions", on_delete=models.CASCADE)
     task = models.ForeignKey(ContestTask, verbose_name="Задача", related_name="submissions", on_delete=models.CASCADE)
