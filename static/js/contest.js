@@ -57,6 +57,13 @@
     RE: 'Ошибка выполнения',
     CE: 'Ошибка компиляции',
   };
+  const SQL_VERDICT_TEXT = {
+    OK: kk ? 'Шешім дұрыс' : 'Решение верное',
+    WA: kk ? 'Нәтиже қате' : 'Неверный результат',
+    TLE: kk ? 'Уақыт шегінен асты' : 'Превышено время',
+    RE: kk ? 'Сұрауды орындау қатесі' : 'Ошибка выполнения запроса',
+    CE: kk ? 'Сұрау қатесі' : 'Ошибка запроса',
+  };
   const CELL_CLASS = { P: 'p', F: 'f', T: 't', E: 'e' };
   const CELL_GLYPH = { P: '✓', F: '✕', T: 'T', E: '!' };
   const CELL_TITLE = { P: 'верно', F: 'неверный ответ', T: 'превышено время', E: 'ошибка выполнения' };
@@ -90,6 +97,7 @@
 
   // ---------- Результаты ----------
   function renderGrid(marks, total) {
+    if (!gridEl || isSQL) return;
     gridEl.innerHTML = '';
     for (let i = 0; i < total; i += 1) {
       const mark = marks[i] || '-';
@@ -113,7 +121,7 @@
 
   function showSubmission(sub, task) {
     verdictEl.className = `cx-verdict ${sub.verdict.toLowerCase()}`;
-    verdictEl.textContent = `${VERDICT_TEXT[sub.verdict] || sub.label} · ${sub.passed}/${sub.total || task.total} тестов`;
+    verdictEl.textContent = isSQL ? (SQL_VERDICT_TEXT[sub.verdict] || sub.label) : `${VERDICT_TEXT[sub.verdict] || sub.label} · ${sub.passed}/${sub.total || task.total} тестов`;
     renderGrid(sub.marks || '', sub.total || task.total);
     setMessage(sub.message);
   }
@@ -130,9 +138,9 @@
       const li = document.createElement('li');
       li.innerHTML = '<span class="v"></span><span class="score"></span><span class="lang"></span><span class="when"></span>';
       const v = li.querySelector('.v');
-      v.textContent = VERDICT_TEXT[sub.verdict] ? sub.label : sub.verdict;
+      v.textContent = isSQL ? (SQL_VERDICT_TEXT[sub.verdict] || sub.label) : (VERDICT_TEXT[sub.verdict] ? sub.label : sub.verdict);
       v.classList.add(sub.verdict.toLowerCase());
-      li.querySelector('.score').textContent = `${sub.passed}/${sub.total}`;
+      li.querySelector('.score').textContent = isSQL ? '' : `${sub.passed}/${sub.total}`;
       li.querySelector('.lang').textContent = sub.language === 'sql' ? 'SQL' : (sub.language === 'cpp' ? 'C++' : 'Python');
       li.querySelector('.when').textContent = sub.time;
       historyEl.appendChild(li);
@@ -142,7 +150,7 @@
   function updateChip(task) {
     const chip = document.querySelector(`[data-chip="${task.id}"]`);
     if (!chip) return;
-    chip.textContent = `${task.best}/${task.total}`;
+    chip.textContent = isSQL ? (task.best ? (kk ? "Шешілді" : "Решена") : (kk ? "Шешілмеді" : "Не решена")) : `${task.best}/${task.total}`;
     chip.classList.toggle('is-full', task.total > 0 && task.best === task.total);
   }
 
@@ -241,7 +249,7 @@
     if (runBtn) runBtn.disabled = true;
     submitBtn.classList.add('is-loading');
     verdictEl.className = 'cx-verdict';
-    verdictEl.textContent = 'Проверяем на тестах…';
+    verdictEl.textContent = isSQL ? (kk ? 'Шешім тексерілуде…' : 'Проверяем решение…') : 'Проверяем на тестах…';
 
     const taskId = currentId;
     try {

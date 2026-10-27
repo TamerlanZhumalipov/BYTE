@@ -52,7 +52,8 @@ def _calculate(topics, quizzes, submissions, mocks, maximum, now):
     for sub in latest_tasks.values():
         linked = [t.pk for t in sub.task.ent_topics.all() if t.pk in topic_ids]
         for topic_id in linked:
-            task_evidence[topic_id].append((sub.passed / sub.total, 2 * _decay(sub.created_at, now) / len(linked)))
+            score = float(sub.verdict == "OK") if sub.language == "sql" else sub.passed / sub.total
+            task_evidence[topic_id].append((score, 2 * _decay(sub.created_at, now) / len(linked)))
 
     rows = []
     evidence_ids = set()

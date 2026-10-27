@@ -125,12 +125,33 @@ class SQLContestTests(TestCase):
         response = self.post('contest_submit')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['submission']['verdict'], 'OK')
-        self.assertEqual(response.json()['best'], 6)
+        self.assertEqual(response.json()['best'], 1)
+        self.assertEqual(response.json()['submission']['passed'], 1)
+        self.assertEqual(response.json()['submission']['total'], 1)
+        self.assertEqual(response.json()['submission']['marks'], '')
         self.assertEqual(Submission.objects.get().language, 'sql')
 
     def test_wrong_answer(self):
         response = self.post('contest_submit', code='SELECT 1')
         self.assertEqual(response.json()['submission']['verdict'], 'WA')
+
+    def test_partial_sql_scores_are_binary_and_solved_status_survives_failed_retry(self):
+        from core.judge import JudgeResult
+        with patch('core.views.run_sql_submission', return_value=JudgeResult('WA',5,6,'PPPPPF')):
+            response = self.post('contest_submit').json()
+        self.assertEqual((response['best'], response['submission']['passed'], response['submission']['total']), (0,0,1))
+        self.assertEqual(Submission.objects.get().passed, 5)  # Internal diagnostics remain available.
+        page = self.client.get(reverse('contest'))
+        self.assertNotContains(page, 'id="cx-grid"')
+        self.assertNotContains(page, 'cx-legend')
+        task = page.context['contest_data']['tasks'][0]
+        self.assertEqual((task['best'],task['total'],task['history'][0]['passed']), (0,1,0))
+        Submission.objects.create(account=self.account,task=self.tasks[0],language='sql',code='',verdict='OK',passed=6,total=6,marks='PPPPPP')
+        Submission.objects.create(account=self.account,task=self.tasks[0],language='sql',code='',verdict='WA',passed=5,total=6,marks='PPPPPF')
+        task = self.client.get(reverse('contest')).context['contest_data']['tasks'][0]
+        self.assertEqual(task['best'], 1)
+        self.assertEqual(task['history'][0]['passed'], 0)
+        self.assertTrue(all(h['total']==1 and h['marks']=='' for h in task['history']))
 
     def test_no_cross_contest_task_or_language(self):
         self.assertEqual(self.post(task_id=self.programming_task.pk).status_code, 404)

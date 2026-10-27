@@ -459,9 +459,9 @@ def _submission_json(sub):
         "id": sub.id,
         "verdict": sub.verdict,
         "label": sub.get_verdict_display(),
-        "passed": sub.passed,
-        "total": sub.total,
-        "marks": sub.marks,
+        "passed": int(sub.verdict == "OK") if sub.language == "sql" else sub.passed,
+        "total": 1 if sub.language == "sql" else sub.total,
+        "marks": "" if sub.language == "sql" else sub.marks,
         "language": sub.language,
         "time": timezone.localtime(sub.created_at).strftime("%H:%M:%S"),
         "message": sub.message,
@@ -533,6 +533,9 @@ def contest(request):
         best = finished.order_by("-passed", "created_at").first()
         history = [_submission_json(s) for s in finished.order_by("-created_at")[:8]]
         best_passed = best.passed if best else 0
+        if contest_obj.kind == "sql":
+            total = 1
+            best_passed = int(finished.filter(verdict="OK").exists())
         lang = get_request_language(request)
         task.display_title = (task.title_kk or task.title) if lang == "kk" else task.title
         task.display_statement = (task.statement_kk or task.statement) if lang == "kk" else task.statement
@@ -641,6 +644,8 @@ def contest_submit(request):
         account.submissions.filter(task=task).exclude(verdict="PENDING")
         .order_by("-passed").values_list("passed", flat=True).first() or 0
     )
+    if is_sql:
+        best = int(account.submissions.filter(task=task, verdict="OK").exists())
     return JsonResponse({
         "submission": _submission_json(submission),
         "best": best,

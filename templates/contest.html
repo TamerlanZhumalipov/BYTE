@@ -49,7 +49,7 @@
             aria-selected="{% if forloop.first %}true{% else %}false{% endif %}" data-task-tab="{{ item.task.id }}">
       <span class="cx-tab-num">{{ forloop.counter }}</span>
       <span>{{ item.task.display_title }}</span>
-      <span class="cx-chip" data-chip="{{ item.task.id }}">{{ item.best }}/{{ item.total }}</span>
+      <span class="cx-chip" data-chip="{{ item.task.id }}">{% if contest.kind == "sql" %}{% if item.best %}{% bt "Решена" %}{% else %}{% bt "Не решена" %}{% endif %}{% else %}{{ item.best }}/{{ item.total }}{% endif %}</span>
     </button>
     {% endfor %}
   </div>
@@ -59,7 +59,7 @@
       {% for item in items %}
       <article class="cx-panel doc" data-task-panel="{{ item.task.id }}"{% if not forloop.first %} hidden{% endif %}>
         <h2>{{ item.task.display_title }}</h2>
-        <p class="cx-limits">{% bt "лимит" %} {{ item.task.time_limit }} {% bt "с на тест" %} · {% bt "тестов" %}: {{ item.total }}</p>
+        <p class="cx-limits">{% bt "лимит" %} {{ item.task.time_limit }} {% if contest.kind == "sql" %}{% bt "с на запрос" %}{% else %}{% bt "с на тест" %} · {% bt "тестов" %}: {{ item.total }}{% endif %}</p>
         <div class="doc-body">{{ item.task.display_statement|safe }}</div>
         {% if contest.kind == 'sql' %}
         <p class="cx-sql-rules">{% bt "Один запрос SELECT или WITH. Порядок столбцов и повторяющиеся строки учитываются." %} {% if item.task.sql_ordered %}{% bt "Порядок строк важен: используйте сортировку из условия." %}{% else %}{% bt "Порядок строк не важен." %}{% endif %} {% bt "Числа сравниваются точно; если нужно округление, оно указано в условии." %}</p>
@@ -100,6 +100,7 @@
       {% endif %}
       <div class="cx-result" aria-live="polite">
         <div class="cx-verdict" id="cx-verdict">{% bt "Отправьте решение — здесь появится результат проверки." %}</div>
+        {% if contest.kind != "sql" %}
         <div class="cx-grid" id="cx-grid" aria-label="Результаты по тестам"></div>
         <div class="cx-legend">
           <span><i class="cx-cell p">✓</i> {% bt "верно" %}</span>
@@ -107,6 +108,7 @@
           <span><i class="cx-cell t">T</i> {% bt "время" %}</span>
           <span><i class="cx-cell e">!</i> {% bt "ошибка" %}</span>
         </div>
+        {% endif %}
         <pre class="cx-message" id="cx-message" hidden></pre>
       </div>
 
@@ -124,5 +126,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/contest.js' %}?v=20261027-sql1"></script>
+<script src="{% static 'js/contest.js' %}?v=20261027-sql2"></script>
 {% endblock %}
