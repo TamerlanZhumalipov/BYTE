@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.http import Http404, JsonResponse
 from django.db import IntegrityError
+from django.db.models import Q
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -20,6 +21,7 @@ from .legal import LEGAL_VERSION, consent_snapshot
 from .forecast import get_forecast
 from .textbooks import book_reply
 from .judge import LANGUAGES, MAX_CODE_BYTES, run_submission
+from .sql_judge import run_query, run_sql_submission, MAX_TESTS
 from .localization import get_request_language, tr
 from .models import (
     AIMessage, Contest, ContestAccount, ContestTask, QuizAttempt, Section, Submission, TopicQuiz,
@@ -128,10 +130,13 @@ def _flatten(nodes):
     return result
 
 
-def _upcoming_contest():
+def _upcoming_contest(kind=None):
     """Ближайший контест, который ещё не закончился."""
     now = timezone.now()
-    for contest in Contest.objects.filter(starts_at__gte=now - timedelta(days=1)).order_by("starts_at"):
+    candidates = Contest.objects.filter(starts_at__gte=now - timedelta(days=1))
+    if kind:
+        candidates = candidates.filter(kind=kind)
+    for contest in candidates.order_by("starts_at"):
         if contest.ends_at >= now:
             return contest
     return None
@@ -473,10 +478,12 @@ def contest_login(request):
         return redirect("contest")
 
     error = ""
+    kind = request.POST.get("kind", request.GET.get("kind", "programming"))
+    kind = kind if kind in {"programming", "sql"} else "programming"
     if request.method == "POST":
         login = request.POST.get("login", "").strip().lower()
         password = request.POST.get("password", "")
-        account = ContestAccount.objects.filter(login=login, is_active=True).first()
+        account = ContestAccount.objects.filter(login=login, is_active=True, contest__kind=kind).first()
         if account and account.check_password(password):
             request.session[CONTEST_SESSION_KEY] = account.pk
             return redirect("contest")
@@ -485,7 +492,8 @@ def contest_login(request):
     return render(request, "contest_login.html", {
         "active_tab": "contest",
         "error": error,
-        "next_contest": _upcoming_contest(),
+        "contest_kind": kind,
+        "next_contest": _upcoming_contest(kind),
     })
 
 
@@ -525,6 +533,9 @@ def contest(request):
         best = finished.order_by("-passed", "created_at").first()
         history = [_submission_json(s) for s in finished.order_by("-created_at")[:8]]
         best_passed = best.passed if best else 0
+        lang = get_request_language(request)
+        task.display_title = (task.title_kk or task.title) if lang == "kk" else task.title
+        task.display_statement = (task.statement_kk or task.statement) if lang == "kk" else task.statement
         items.append({"task": task, "total": total, "best": best_passed})
         payload_tasks.append({
             "id": task.id,
@@ -535,6 +546,8 @@ def contest(request):
 
     context["items"] = items
     context["contest_data"] = {
+        "kind": contest_obj.kind,
+        "runUrl": reverse("contest_sql_run"),
         "contestId": contest_obj.id,
         "accountId": account.id,
         "state": state,
@@ -573,7 +586,8 @@ def contest_submit(request):
 
     language = data.get("language")
     code = data.get("code")
-    if language not in LANGUAGES or not isinstance(code, str) or not code.strip():
+    allowed_languages = ("sql",) if contest_obj.kind == "sql" else LANGUAGES
+    if language not in allowed_languages or not isinstance(code, str) or not code.strip():
         return JsonResponse({"error": "Выберите язык и напишите решение."}, status=400)
     if len(code.encode("utf-8")) > MAX_CODE_BYTES:
         return JsonResponse({"error": "Решение слишком большое (максимум 64 КБ)."}, status=400)
@@ -587,21 +601,34 @@ def contest_submit(request):
             wait = int(math.ceil(SUBMIT_COOLDOWN_SEC - elapsed))
             return JsonResponse({"error": f"Слишком часто. Подождите {wait} с."}, status=429)
 
-    tests = list(task.tests.values_list("input_data", "expected_output"))
+    is_sql = contest_obj.kind == "sql"
+    if is_sql and contest_obj.tasks.count() != 3:
+        return JsonResponse({"error": "SQL-контест должен содержать 3 задачи. Сообщите куратору."}, status=409)
+    tests = list(task.tests.values_list("sql_fixture", flat=True)) if is_sql else list(task.tests.values_list("input_data", "expected_output"))
+    if is_sql and (len(tests) > MAX_TESTS or not task.sql_reference.strip()):
+        return JsonResponse({"error": "SQL-задача ещё не настроена. Сообщите куратору."}, status=409)
     if not tests:
         return JsonResponse({"error": "У этой задачи пока нет тестов. Сообщите куратору."}, status=409)
+
+    lease = _acquire_sql_slot(account) if is_sql else None
+    if is_sql and lease is None:
+        return JsonResponse({"error": "Предыдущий SQL-запрос ещё выполняется. Подождите несколько секунд."}, status=429)
 
     submission = Submission.objects.create(
         account=account, task=task, language=language, code=code, total=len(tests),
     )
     try:
-        result = run_submission(code, language, tests, task.time_limit)
+        result = run_sql_submission(code, task, tests) if is_sql else run_submission(code, language, tests, task.time_limit)
     except Exception:  # noqa: BLE001 — не оставляем отправку в статусе «проверяется»
         logger.exception("Ошибка проверяющей системы")
         submission.verdict = "RE"
         submission.message = "Внутренняя ошибка проверки. Сообщите куратору."
         submission.save(update_fields=["verdict", "message"])
         return JsonResponse({"error": "Внутренняя ошибка проверки. Сообщите куратору."}, status=500)
+
+    finally:
+        if lease is not None:
+            _release_sql_slot(account, lease)
 
     submission.verdict = result.verdict
     submission.passed = result.passed
@@ -778,3 +805,55 @@ def ai_reset(request, slug):
         raise Http404("Раздел не найден")
     AIMessage.objects.filter(user=request.user, section=section, archived=False).update(archived=True)
     return JsonResponse({"ok": True})
+
+
+# SQL runs share a database-backed per-participant lease with submissions.
+# Unlike a session/cache timestamp, this also serializes requests across workers.
+def _acquire_sql_slot(account):
+    now = timezone.now()
+    lease = now + timedelta(seconds=35)
+    claimed = ContestAccount.objects.filter(pk=account.pk).filter(
+        Q(sql_busy_until__isnull=True) | Q(sql_busy_until__lte=now)
+    ).update(sql_busy_until=lease)
+    return lease if claimed else None
+
+
+def _release_sql_slot(account, lease):
+    ContestAccount.objects.filter(pk=account.pk, sql_busy_until=lease).update(
+        sql_busy_until=timezone.now() + timedelta(seconds=2)
+    )
+
+
+@login_required
+@require_POST
+def contest_sql_run(request):
+    account = _current_account(request)
+    if account is None or account.contest.kind != "sql":
+        return JsonResponse({"error": "Войдите в SQL-контест."}, status=403)
+    state = account.contest.state()
+    if state != "running":
+        return JsonResponse({"error": "Контест сейчас не идёт.", "state": state}, status=403)
+    try:
+        data = json.loads(request.body)
+        task_id = int(data.get("task_id"))
+        code = data.get("code")
+    except (ValueError, TypeError, AttributeError):
+        return JsonResponse({"error": "Некорректный запрос."}, status=400)
+    if not isinstance(code, str) or not code.strip() or len(code.encode()) > MAX_CODE_BYTES:
+        return JsonResponse({"error": "Напишите SQL-запрос размером до 64 КБ."}, status=400)
+    task = ContestTask.objects.filter(pk=task_id, contest=account.contest).first()
+    if task is None:
+        return JsonResponse({"error": "Такой задачи нет в этом контесте."}, status=404)
+    if account.contest.tasks.count() != 3:
+        return JsonResponse({"error": "SQL-контест должен содержать 3 задачи. Сообщите куратору."}, status=409)
+    lease = _acquire_sql_slot(account)
+    if lease is None:
+        return JsonResponse({"error": "Подождите завершения предыдущего запроса и 2 секунды перед следующим."}, status=429)
+    try:
+        result = run_query(code, task.sql_sample, task.time_limit)
+    except (ValueError, TypeError):
+        return JsonResponse({"error": "Ошибка настройки открытого набора. Сообщите куратору."}, status=409)
+    finally:
+        _release_sql_slot(account, lease)
+    # Runs never create Submission rows or change scores.
+    return JsonResponse(result)

@@ -9,12 +9,12 @@
 <title>{% block title %}Кабинет{% endblock %} — BYTE</title>
 <script src="{% static 'js/theme.js' %}"></script>
 <link rel="stylesheet" href="{% static 'css/style.css' %}">
-<link rel="stylesheet" href="{% static 'css/app.css' %}?v=20261005-learning1">
+<link rel="stylesheet" href="{% static 'css/app.css' %}?v=20261027-sql1">
 <link rel="stylesheet" href="{% static 'css/theme.css' %}">
 <link rel="stylesheet" href="{% static 'css/motion.css' %}?v=20261005-learning1">
 <link rel="stylesheet" href="{% static 'css/legal.css' %}">
 </head>
-<body class="app-body">
+<body class="app-body {% block body_class %}{% endblock %}">
 <header class="app-header"><div class="app-header-inner">
 <a class="brand" href="{% url 'index' %}"><img class="brand-logo brand-logo-dark" src="{% static 'img/byte-logo-sh2-dark.svg' %}" alt="BYTE"><img class="brand-logo brand-logo-light" src="{% static 'img/byte-logo-sh2-light.svg' %}" alt="BYTE"></a>
 <nav class="app-tabs" aria-label="Разделы кабинета"><a class="app-tab{% if active_tab == 'materials' %} is-active{% endif %}" href="{% url 'dashboard' %}">{% bt "Материалы" %}</a><a class="app-tab{% if active_tab == 'analytics' %} is-active{% endif %}" href="{% url 'analytics' %}">{% bt "Аналитика" %}</a><a class="app-tab{% if active_tab == 'contest' %} is-active{% endif %}" href="{% url 'contest' %}">{% bt "Лайв-контест" %}</a></nav>

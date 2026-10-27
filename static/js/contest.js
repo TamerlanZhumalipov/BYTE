@@ -32,6 +32,10 @@
   const editor = $('cx-editor');
   const langSelect = $('cx-lang');
   const submitBtn = $('cx-submit');
+  const runBtn = $('cx-run');
+  const isSQL = data.kind === 'sql';
+  const kk = document.documentElement.lang === 'kk';
+  let busy = false;
   const verdictEl = $('cx-verdict');
   const gridEl = $('cx-grid');
   const messageEl = $('cx-message');
@@ -42,6 +46,7 @@
   const closedEl = $('cx-closed');
 
   const STARTERS = {
+    sql: kk ? '-- Ашық кестелер бойынша SELECT сұрауын жазыңыз\n' : '-- Напишите SELECT-запрос к открытым таблицам\n',
     python: '# Читайте данные через input(), ответ выводите через print()\n',
     cpp: '#include <iostream>\nusing namespace std;\n\nint main() {\n    // ваш код\n    return 0;\n}\n',
   };
@@ -58,7 +63,7 @@
 
   const tasks = new Map(data.tasks.map((t) => [t.id, t]));
   let currentId = data.tasks.length ? data.tasks[0].id : null;
-  let activeLang = 'python';
+  let activeLang = isSQL ? 'sql' : 'python';
   let locked = data.state !== 'running';
   let endAt = performance.now() + data.remaining * 1000;
   let trapTab = true;
@@ -77,7 +82,7 @@
   }
 
   function loadEditor() {
-    activeLang = store.get(langKey(currentId)) === 'cpp' ? 'cpp' : 'python';
+    activeLang = isSQL ? 'sql' : (store.get(langKey(currentId)) === 'cpp' ? 'cpp' : 'python');
     langSelect.value = activeLang;
     const saved = store.get(codeKey(currentId, activeLang));
     editor.value = saved !== null ? saved : STARTERS[activeLang];
@@ -128,7 +133,7 @@
       v.textContent = VERDICT_TEXT[sub.verdict] ? sub.label : sub.verdict;
       v.classList.add(sub.verdict.toLowerCase());
       li.querySelector('.score').textContent = `${sub.passed}/${sub.total}`;
-      li.querySelector('.lang').textContent = sub.language === 'cpp' ? 'C++' : 'Python';
+      li.querySelector('.lang').textContent = sub.language === 'sql' ? 'SQL' : (sub.language === 'cpp' ? 'C++' : 'Python');
       li.querySelector('.when').textContent = sub.time;
       historyEl.appendChild(li);
     });
@@ -169,6 +174,7 @@
     });
     loadEditor();
     renderTaskResult();
+    if (isSQL) { $('cx-run-table').replaceChildren(); $('cx-run-status').textContent = kk ? 'Сұрауды ашық деректерде іске қосыңыз.' : 'Запустите запрос на открытых данных.'; }
   }
 
   document.querySelectorAll('[data-task-tab]').forEach((btn) => {
@@ -213,6 +219,7 @@
     editor.readOnly = true;
     langSelect.disabled = true;
     submitBtn.disabled = true;
+    if (runBtn) runBtn.disabled = true;
     if (message) {
       closedEl.textContent = message;
       closedEl.hidden = false;
@@ -221,7 +228,7 @@
 
   // ---------- Отправка решения ----------
   async function submit() {
-    if (locked || submitBtn.disabled) return;
+    if (locked || busy || submitBtn.disabled || currentId === null) return;
     const code = editor.value;
     if (!code.trim()) {
       setNotice('Напишите решение перед отправкой.');
@@ -229,7 +236,9 @@
     }
     saveDraft();
     setNotice('');
+    busy = true;
     submitBtn.disabled = true;
+    if (runBtn) runBtn.disabled = true;
     submitBtn.classList.add('is-loading');
     verdictEl.className = 'cx-verdict';
     verdictEl.textContent = 'Проверяем на тестах…';
@@ -264,11 +273,50 @@
       renderTaskResult();
       setNotice('Нет связи с сервером. Проверьте интернет и отправьте ещё раз.');
     } finally {
+      busy = false;
       submitBtn.classList.remove('is-loading');
-      if (!locked) submitBtn.disabled = false;
+      if (!locked) { submitBtn.disabled = false; if (runBtn) runBtn.disabled = false; }
     }
   }
 
+  async function runSQL() {
+    if (locked || busy || currentId === null) return;
+    if (!editor.value.trim()) { setNotice(kk ? 'SQL сұрауын жазыңыз.' : 'Напишите SQL-запрос.'); return; }
+    const taskId = currentId;
+    busy = true;
+    runBtn.disabled = true;
+    submitBtn.disabled = true;
+    saveDraft();
+    setNotice('');
+    $('cx-run-table').replaceChildren();
+    $('cx-run-status').textContent = kk ? 'Орындалуда…' : 'Выполняем…';
+    try {
+      const response = await fetch(data.runUrl, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+        body: JSON.stringify({ task_id: taskId, code: editor.value }),
+      });
+      const body = await response.json();
+      if (body.state === 'finished') lockUI(kk ? 'Контест аяқталды.' : 'Контест завершён.');
+      if (currentId !== taskId) return; // Ignore an older task's response after switching tabs.
+      if (!response.ok || body.status !== 'OK') {
+        $('cx-run-status').textContent = body.error || body.message || (kk ? 'Сұрау орындалмады.' : 'Запрос не выполнен.');
+        return;
+      }
+      $('cx-run-status').textContent = `${body.rows.length} ${kk ? 'жол · ұпайға әсер етпейді' : 'строк · не влияет на баллы'}`;
+      const table = document.createElement('table');
+      const head = table.createTHead().insertRow();
+      body.columns.forEach((column) => { const th = document.createElement('th'); th.textContent = column; head.append(th); });
+      const tbody = table.createTBody();
+      body.rows.forEach((row) => { const tr = tbody.insertRow(); row.forEach((value) => { const td = tr.insertCell(); td.textContent = value === null ? 'NULL' : String(value); if (value === null) td.className = 'cx-null'; }); });
+      $('cx-run-table').append(table);
+    } catch (_) {
+      if (currentId === taskId) $('cx-run-status').textContent = kk ? 'Сервермен байланыс жоқ.' : 'Нет связи с сервером.';
+    } finally {
+      busy = false;
+      if (!locked) { runBtn.disabled = false; submitBtn.disabled = false; }
+    }
+  }
+  if (runBtn) runBtn.addEventListener('click', runSQL);
   submitBtn.addEventListener('click', submit);
 
   // ---------- Таймер ----------
@@ -285,7 +333,7 @@
   // ---------- Старт ----------
   data.tasks.forEach(updateChip);
   if (currentId !== null) showTask(currentId);
-  if (locked) lockUI('');
+  if (locked || currentId === null) lockUI('');
   tickTimer();
   setInterval(tickTimer, 250);
 })();

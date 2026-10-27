@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib import admin
+from django.forms.models import BaseInlineFormSet
 
 from .models import (
     AIMessage, Contest, ContestAccount, ContestTask, Lead, QuizAttempt, QuizChoice,
@@ -73,23 +74,41 @@ class QuizAttemptAdmin(admin.ModelAdmin):
         return False
 
 
+class ContestTasksFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+        active = [form for form in self.forms if form.cleaned_data and not form.cleaned_data.get("DELETE")]
+        if self.instance.kind == "sql" and len(active) != 3:
+            raise forms.ValidationError("В SQL-контесте должно быть ровно 3 задачи.")
+
+
 class ContestTaskInline(admin.StackedInline):
     model = ContestTask
     extra = 0
-    fields = ("order", "title", "time_limit", "statement", "ent_topics")
+    formset = ContestTasksFormSet
+    fields = ("order", "title", "title_kk", "time_limit", "statement", "statement_kk", "ent_topics", "sql_sample", "sql_reference", "sql_ordered")
 
 
 @admin.register(Contest)
 class ContestAdmin(admin.ModelAdmin):
-    list_display = ("title", "starts_at", "duration_minutes")
+    list_display = ("title", "kind", "starts_at", "duration_minutes")
+    list_filter = ("kind",)
     inlines = [ContestTaskInline]
+
+
+class TaskTestInline(admin.StackedInline):
+    model = TaskTest
+    extra = 0
 
 
 @admin.register(ContestTask)
 class ContestTaskAdmin(admin.ModelAdmin):
+    inlines = [TaskTestInline]
     filter_horizontal = ("ent_topics",)
     list_display = ("title", "contest", "order", "tests_count")
-    list_filter = ("contest",)
+    list_filter = ("contest__kind", "contest")
 
     @admin.display(description="Тестов")
     def tests_count(self, obj):
@@ -104,7 +123,7 @@ class TaskTestAdmin(admin.ModelAdmin):
 
     @admin.display(description="Вход")
     def short_input(self, obj):
-        return obj.input_data[:60]
+        return "SQL: скрытый набор" if obj.sql_fixture else obj.input_data[:60]
 
 
 class ContestAccountForm(forms.ModelForm):

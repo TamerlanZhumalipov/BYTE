@@ -27,4 +27,5 @@ urlpatterns = [
     path("contest/login/", views.contest_login, name="contest_login"),
     path("contest/logout/", views.contest_logout, name="contest_logout"),
     path("contest/submit/", views.contest_submit, name="contest_submit"),
+    path("contest/sql/run/", views.contest_sql_run, name="contest_sql_run"),
 ]

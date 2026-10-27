@@ -3,6 +3,8 @@
 
 {% block title %}{{ contest.title }}{% endblock %}
 
+{% block body_class %}contest-page{% endblock %}
+
 {% block body %}
 {% if state == "upcoming" %}
 
@@ -26,7 +28,7 @@
 <div class="cx">
   <div class="cx-top">
     <div class="cx-title">
-      {{ contest.title }}
+      {{ contest.title }} <span class="cx-kind-badge">{% if contest.kind == "sql" %}SQL · SQLite{% else %}Python / C++{% endif %}</span>
       <span class="cx-user">{{ account.full_name|default:account.login }} · {{ account.login }}</span>
     </div>
     <div class="cx-top-right">
@@ -46,7 +48,7 @@
     <button class="cx-tab{% if forloop.first %} is-active{% endif %}" type="button" role="tab"
             aria-selected="{% if forloop.first %}true{% else %}false{% endif %}" data-task-tab="{{ item.task.id }}">
       <span class="cx-tab-num">{{ forloop.counter }}</span>
-      <span>{{ item.task.title }}</span>
+      <span>{{ item.task.display_title }}</span>
       <span class="cx-chip" data-chip="{{ item.task.id }}">{{ item.best }}/{{ item.total }}</span>
     </button>
     {% endfor %}
@@ -56,9 +58,20 @@
     <div class="cx-statement">
       {% for item in items %}
       <article class="cx-panel doc" data-task-panel="{{ item.task.id }}"{% if not forloop.first %} hidden{% endif %}>
-        <h2>{{ item.task.title }}</h2>
+        <h2>{{ item.task.display_title }}</h2>
         <p class="cx-limits">{% bt "лимит" %} {{ item.task.time_limit }} {% bt "с на тест" %} · {% bt "тестов" %}: {{ item.total }}</p>
-        <div class="doc-body">{{ item.task.statement|safe }}</div>
+        <div class="doc-body">{{ item.task.display_statement|safe }}</div>
+        {% if contest.kind == 'sql' %}
+        <p class="cx-sql-rules">{% bt "Один запрос SELECT или WITH. Порядок столбцов и повторяющиеся строки учитываются." %} {% if item.task.sql_ordered %}{% bt "Порядок строк важен: используйте сортировку из условия." %}{% else %}{% bt "Порядок строк не важен." %}{% endif %} {% bt "Числа сравниваются точно; если нужно округление, оно указано в условии." %}</p>
+        <h3>{% bt "Схема и открытые данные" %}</h3>
+        {% for table in item.task.sql_sample.tables %}
+        <details class="cx-sql-schema" open><summary><code>{{ table.name }}</code> · {{ table.rows|length }} {% bt "строк" %}</summary>
+          <div class="cx-sql-table"><table><thead><tr>{% for column in table.columns %}<th>{{ column.0 }}<small>{{ column.1 }}</small></th>{% endfor %}</tr></thead><tbody>
+          {% for row in table.rows %}<tr>{% for value in row %}<td>{% if value is None %}<span class="cx-null">NULL</span>{% else %}{{ value }}{% endif %}</td>{% endfor %}</tr>{% empty %}<tr><td colspan="{{ table.columns|length }}">{% bt "Нет строк" %}</td></tr>{% endfor %}
+          </tbody></table></div>
+        </details>
+        {% endfor %}
+        {% endif %}
       </article>
       {% endfor %}
     </div>
@@ -67,17 +80,24 @@
       <div class="cx-toolbar">
         <label class="cx-lang">{% bt "Язык" %}
           <select id="cx-lang">
-            <option value="python">Python</option>
-            <option value="cpp">C++</option>
+            {% if contest.kind == 'sql' %}<option value="sql">SQL · SQLite</option>{% else %}<option value="python">Python</option><option value="cpp">C++</option>{% endif %}
           </select>
         </label>
         <span class="cx-hint">Ctrl/⌘ + Enter — {% bt "отправить" %}</span>
+        {% if contest.kind == "sql" %}<button class="btn btn-ghost" id="cx-run" type="button">{% bt "Запустить запрос" %}</button>{% endif %}
         <button class="btn btn-primary" id="cx-submit" type="button">{% bt "Отправить решение" %}</button>
       </div>
       <p class="cx-notice" id="cx-notice" role="alert" hidden></p>
 
       <textarea id="cx-editor" class="cx-editor" rows="16" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="{% bt 'Код решения' %}"></textarea>
 
+      {% if contest.kind == 'sql' %}
+      <section class="cx-sql-preview" aria-live="polite" aria-label="{% bt 'Результат на открытых данных' %}">
+        <h3>{% bt "Результат на открытых данных" %}</h3>
+        <p id="cx-run-status">{% bt "Запуск не влияет на баллы. Для проверки отправьте решение." %}</p>
+        <div id="cx-run-table" class="cx-sql-table"></div>
+      </section>
+      {% endif %}
       <div class="cx-result" aria-live="polite">
         <div class="cx-verdict" id="cx-verdict">{% bt "Отправьте решение — здесь появится результат проверки." %}</div>
         <div class="cx-grid" id="cx-grid" aria-label="Результаты по тестам"></div>
@@ -104,5 +124,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/contest.js' %}"></script>
+<script src="{% static 'js/contest.js' %}?v=20261027-sql1"></script>
 {% endblock %}

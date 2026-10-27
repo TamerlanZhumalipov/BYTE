@@ -3,6 +3,8 @@
 
 {% block title %}{% bt "Вход в контест" %}{% endblock %}
 
+{% block body_class %}contest-page{% endblock %}
+
 {% block body %}
 <main class="auth-main">
   <div class="auth-card">
@@ -10,6 +12,11 @@
     <h1 class="auth-title" style="text-align:left; margin-top:0;">{% bt "Вход в контест" %}</h1>
     <p class="auth-subtitle" style="text-align:left;">{% bt "У контеста отдельные логин и пароль — не такие, как на сайте. Их выдаёт куратор." %}</p>
 
+    <nav class="cx-kind-picker" aria-label="{% bt 'Тип контеста' %}">
+      <a class="btn {% if contest_kind == 'programming' %}btn-primary{% else %}btn-ghost{% endif %}" href="?kind=programming"{% if contest_kind == 'programming' %} aria-current="page"{% endif %}>{% bt "Программирование" %}</a>
+      <a class="btn {% if contest_kind == 'sql' %}btn-primary{% else %}btn-ghost{% endif %}" href="?kind=sql"{% if contest_kind == 'sql' %} aria-current="page"{% endif %}>SQL</a>
+    </nav>
+    <p class="field-hint">{% if contest_kind == 'sql' %}{% bt "SQL · 3 задачи · отдельный контест" %}{% else %}Python / C++{% endif %}</p>
     {% if next_contest %}
     <p class="contest-when">{% bt "Ближайший контест" %}: <strong>{{ next_contest.title }}</strong>, {{ next_contest.starts_at|date:"j E, H:i" }}</p>
     {% endif %}
@@ -18,6 +25,7 @@
 
     <form method="post" action="{% url 'contest_login' %}">
       {% csrf_token %}
+      <input type="hidden" name="kind" value="{{ contest_kind }}">
       <div class="field-group">
         <label for="login">{% bt "Логин контеста" %}</label>
         <input type="text" id="login" name="login" autocomplete="off" autocapitalize="off" spellcheck="false" required autofocus>
