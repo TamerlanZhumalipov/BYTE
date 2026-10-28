@@ -147,3 +147,15 @@ class JudgeAcceptanceCommandTests(SimpleTestCase):
         with patch('core.management.commands.verify_judge.run_submission',side_effect=[JudgeResult('OK',1,1,'P'),JudgeResult('OK',1,1,'P'),JudgeResult('TLE',0,1,'T')]) as run:
             call_command('verify_judge',stdout=StringIO())
             self.assertEqual([c.args[1] for c in run.call_args_list],['python','cpp','python'])
+
+
+class ContainerCompileTests(SimpleTestCase):
+    @override_settings(JUDGE_BACKEND='docker')
+    def test_python_syntax_check_creates_no_container_owned_cache(self):
+        from core.judge import _prepare_container
+        with tempfile.TemporaryDirectory() as folder, patch('core.container_runner.run', return_value=subprocess.CompletedProcess([],0,b'',b'')) as run:
+            cmd,error=_prepare_container('print(1)','python',folder)
+            self.assertEqual(error,'')
+            self.assertFalse(run.call_args.kwargs['writable'])
+            self.assertNotIn('py_compile',run.call_args.args[0])
+            self.assertIn('-B',cmd)

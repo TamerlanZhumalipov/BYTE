@@ -205,10 +205,10 @@ def _prepare_container(code, language, workdir):
     filename = "main.py" if language == "python" else "main.cpp"
     with open(os.path.join(workdir, filename), "w", encoding="utf-8") as source:
         source.write(code)
-    command = (["python3", "-I", "-m", "py_compile", "main.py"] if language == "python"
+    command = (["python3", "-I", "-B", "-c", "from pathlib import Path; compile(Path('main.py').read_bytes(), 'main.py', 'exec')"] if language == "python"
                else ["g++", "-O2", "-std=c++17", "-o", "main", "main.cpp"])
     try:
-        result = run(command, workdir, timeout=COMPILE_TIMEOUT_SEC, writable=True)
+        result = run(command, workdir, timeout=COMPILE_TIMEOUT_SEC, writable=(language == "cpp"))
     except subprocess.TimeoutExpired:
         return None, "Компиляция заняла слишком много времени."
     if result.returncode:
