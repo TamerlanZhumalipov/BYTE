@@ -5,13 +5,13 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}{% endblock %} — BYTE</title>
 <script src="{% static 'js/theme.js' %}"></script>
-<link rel="stylesheet" href="{% static 'css/style.css' %}">
+<link rel="stylesheet" href="{% static 'css/style.css' %}?v=20261028-brand">
 <link rel="stylesheet" href="{% static 'css/theme.css' %}">
 <link rel="stylesheet" href="{% static 'css/legal.css' %}">
 </head>
 <body>
 <header class="site-header"><div class="container">
-<a class="brand" href="{% url 'index' %}" aria-label="BYTE"><img class="brand-logo brand-logo-dark" src="{% static 'img/byte-logo-sh2-dark.svg' %}" alt="BYTE"><img class="brand-logo brand-logo-light" src="{% static 'img/byte-logo-sh2-light.svg' %}" alt="BYTE"></a>
+<a class="brand" href="{% url 'index' %}" aria-label="BYTE"><img class="brand-logo brand-logo-dark" src="{% static 'img/byte-logo-shanyrak-code-dark.svg' %}" alt="BYTE"><img class="brand-logo brand-logo-light" src="{% static 'img/byte-logo-shanyrak-code-light.svg' %}" alt="BYTE"></a>
 <div class="header-actions">
 <form class="lang-switch" method="post" action="{% url 'set_language' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="lang-option{% if site_lang == 'ru' %} is-active{% endif %}" name="language" value="ru">RU</button><button class="lang-option{% if site_lang == 'kk' %} is-active{% endif %}" name="language" value="kk">KZ</button></form>
 <button class="theme-button" id="themeButton" type="button" aria-label="{% bt 'Светлая тема' %}">☀</button>

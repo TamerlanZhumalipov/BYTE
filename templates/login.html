@@ -5,14 +5,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% bt "Войти" %} — BYTE</title>
-<link rel="stylesheet" href="{% static 'css/style.css' %}">
+<script src="{% static 'js/theme.js' %}"></script>
+<link rel="stylesheet" href="{% static 'css/style.css' %}?v=20261028-brand">
+<link rel="stylesheet" href="{% static 'css/theme.css' %}">
 <link rel="stylesheet" href="{% static 'css/legal.css' %}">
 </head>
 <body class="auth-shell">
 
 <header class="site-header">
   <div class="container">
-    <a class="brand" href="{% url 'index' %}"><img class="brand-logo brand-logo-dark" src="{% static 'img/byte-logo-sh2-dark.svg' %}" alt="BYTE"><img class="brand-logo brand-logo-light" src="{% static 'img/byte-logo-sh2-light.svg' %}" alt="BYTE"></a>
+    <a class="brand" href="{% url 'index' %}"><img class="brand-logo brand-logo-dark" src="{% static 'img/byte-logo-shanyrak-code-dark.svg' %}" alt="BYTE"><img class="brand-logo brand-logo-light" src="{% static 'img/byte-logo-shanyrak-code-light.svg' %}" alt="BYTE"></a>
     <nav class="main-nav">
       <a href="{% url 'index' %}#tracks">{% bt "Языки" %}</a>
       <a href="{% url 'index' %}#pricing">{% bt "Пакеты" %}</a>
@@ -27,7 +29,7 @@
 
 <main class="auth-main">
   <div class="auth-card">
-    <div class="brand auth-brand"><img class="brand-logo brand-logo-dark" src="{% static 'img/byte-logo-sh2-dark.svg' %}" alt="BYTE"><img class="brand-logo brand-logo-light" src="{% static 'img/byte-logo-sh2-light.svg' %}" alt="BYTE"></div>
+    <div class="brand auth-brand"><img class="brand-logo brand-logo-dark" src="{% static 'img/byte-logo-shanyrak-code-dark.svg' %}" alt="BYTE"><img class="brand-logo brand-logo-light" src="{% static 'img/byte-logo-shanyrak-code-light.svg' %}" alt="BYTE"></div>
     <h1 class="auth-title">{% bt "С возвращением" %}</h1>
     <p class="auth-subtitle">{% bt "Войдите, чтобы продолжить обучение и записаться на ближайший контест." %}</p>
 

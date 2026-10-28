@@ -226,6 +226,7 @@ select:focus-visible {
 }
 
 .brand {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -234,7 +235,7 @@ select:focus-visible {
   font-size: 20px;
 }
 
-.brand-logo { display: block; height: 34px; width: auto; }
+.brand-logo { display: block; height: 38px; width: auto; flex-shrink: 0; }
 .brand-logo-light { display: none; }
 html.light-theme .brand-logo-dark { display: none; }
 html.light-theme .brand-logo-light { display: block; }
@@ -948,3 +949,11 @@ html.light-theme .brand-logo-light { display: block; }
 .lang-option:active{transform:scale(.96)}
 html.light-theme .lang-switch{background:#fff;border-color:var(--border)}
 @media(max-width:640px){.lang-option{min-width:31px;padding:0 6px}.lang-switch{padding:2px}}
+
+/* Keep the full brand visible alongside the mobile header controls. */
+@media (max-width: 640px) {
+  .site-header .container { position: relative; height: auto; min-height: 76px; flex-wrap: wrap; gap: 12px; padding-top: 12px; padding-bottom: 12px; }
+  .site-header .nav-toggle { position: absolute; right: 18px; top: 12px; }
+  .site-header .header-actions { flex-basis: 100%; flex-wrap: wrap; gap: 8px; }
+  .site-header .header-actions .btn { padding: 10px 14px; font-size: 13px; }
+}
