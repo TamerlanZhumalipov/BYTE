@@ -7,14 +7,14 @@
 <title>{% if site_lang == "kk" %}BYTE — информатикадан ҰБТ-ға дайындық курсы{% else %}BYTE — курс подготовки к ЕНТ по информатике{% endif %}</title>
 <meta name="description" content="{% if site_lang == 'kk' %}BYTE — информатикадан ҰБТ-ға дайындық, Python, C++, SQL, HTML/CSS және лайв-кодинг контесттері.{% else %}BYTE — курс по информатике: подготовка к ЕНТ, Python, C++, SQL, HTML/CSS и еженедельные лайв-кодинг контесты.{% endif %}">
 <script src="{% static 'js/theme.js' %}"></script>
-<link rel="stylesheet" href="{% static 'css/style.css' %}">
+<link rel="stylesheet" href="{% static 'css/style.css' %}?v=20261028-brand">
 <link rel="stylesheet" href="{% static 'css/theme.css' %}">
 <link rel="stylesheet" href="{% static 'css/motion.css' %}">
 <link rel="stylesheet" href="{% static 'css/legal.css' %}">
 </head>
 <body>
 <header class="site-header"><div class="container">
-<a class="brand" href="{% url 'index' %}"><img class="brand-logo brand-logo-dark" src="{% static 'img/byte-logo-sh2-dark.svg' %}" alt="BYTE"><img class="brand-logo brand-logo-light" src="{% static 'img/byte-logo-sh2-light.svg' %}" alt="BYTE"></a>
+<a class="brand" href="{% url 'index' %}"><img class="brand-logo brand-logo-dark" src="{% static 'img/byte-logo-shanyrak-code-dark.svg' %}" alt="BYTE"><img class="brand-logo brand-logo-light" src="{% static 'img/byte-logo-shanyrak-code-light.svg' %}" alt="BYTE"></a>
 <nav class="main-nav">
 <a href="#tracks">{% bt "Языки" %}</a>
 <a href="#ent">ҰБТ</a>
@@ -117,7 +117,7 @@
 </form>
 </div></div></section>
 
-<footer><div class="container"><a class="brand" href="{% url 'index' %}"><img class="brand-logo brand-logo-dark" src="{% static 'img/byte-logo-sh2-dark.svg' %}" alt="BYTE"><img class="brand-logo brand-logo-light" src="{% static 'img/byte-logo-sh2-light.svg' %}" alt="BYTE"></a><p>{% if site_lang == "kk" %}Информатика және бағдарламалау бойынша ҰБТ-ға дайындық.{% else %}Подготовка к ЕНТ по информатике и программированию.{% endif %}</p></div></footer>
+<footer><div class="container"><a class="brand" href="{% url 'index' %}"><img class="brand-logo brand-logo-dark" src="{% static 'img/byte-logo-shanyrak-code-dark.svg' %}" alt="BYTE"><img class="brand-logo brand-logo-light" src="{% static 'img/byte-logo-shanyrak-code-light.svg' %}" alt="BYTE"></a><p>{% if site_lang == "kk" %}Информатика және бағдарламалау бойынша ҰБТ-ға дайындық.{% else %}Подготовка к ЕНТ по информатике и программированию.{% endif %}</p></div></footer>
 <script src="{% static 'js/main.js' %}"></script><script src="{% static 'js/motion.js' %}"></script>
 {% include 'includes/legal_footer.html' %}
 {% include 'includes/cookie_preferences.html' %}
