@@ -1,17 +1,15 @@
-"""Проверка решений: запускает код ученика на тестах и сравнивает вывод.
+"""Programming judge: production execution is restricted to Docker containers.
 
-ВАЖНО. Этот модуль исполняет ЧУЖИЕ программы на той же машине, где работает сайт.
-Здесь есть лимиты по времени, памяти и размеру вывода, но это НЕ полноценная
-песочница: программа ученика всё ещё может читать файлы сервера. Для учебного
-курса с известными учениками этого достаточно на старте, а перед реальным
-запуском лучше вынести проверку в изолированную среду (Docker / Judge0) —
-достаточно заменить одну функцию: run_submission().
+Local execution is available only with DEBUG and explicit BYTE_JUDGE_BACKEND=local.
+Do not use the local backend for untrusted students.
 """
 import os
 import subprocess
 import sys
 import tempfile
 import time
+import math
+from django.conf import settings
 from dataclasses import dataclass
 
 LANGUAGES = ("python", "cpp")
@@ -88,8 +86,18 @@ def _read_head(path, limit):
         return ""
 
 
+def _sandboxed():
+    if settings.JUDGE_BACKEND == "local" and not settings.DEBUG:
+        raise RuntimeError("Local judge is forbidden in production.")
+    if settings.JUDGE_BACKEND not in {"docker", "local"}:
+        raise RuntimeError("Unknown judge backend.")
+    return settings.JUDGE_BACKEND == "docker"
+
+
 def _prepare(code, language, workdir):
     """Готовит программу к запуску. Возвращает (команда, текст_ошибки)."""
+    if _sandboxed():
+        return _prepare_container(code, language, workdir)
     if language == "python":
         with open(os.path.join(workdir, "main.py"), "w", encoding="utf-8") as f:
             f.write(code)
@@ -119,6 +127,13 @@ def _prepare(code, language, workdir):
 
 def _run_one(cmd, workdir, stdin_text, timeout):
     """Один запуск. Возвращает (статус, вывод, stderr): статус OK / T / E."""
+    if _sandboxed():
+        from .container_runner import run
+        try:
+            result = run(cmd, workdir, stdin=stdin_text.encode(), timeout=timeout+LAUNCH_OVERHEAD_SEC)
+        except subprocess.TimeoutExpired:
+            return "T", "", ""
+        return ("OK" if result.returncode == 0 else "E", result.stdout.decode("utf-8",errors="replace"), result.stderr.decode("utf-8",errors="replace"))
     out_path = os.path.join(workdir, "_out.txt")
     err_path = os.path.join(workdir, "_err.txt")
     try:
@@ -138,6 +153,10 @@ def _run_one(cmd, workdir, stdin_text, timeout):
 
 def run_submission(code, language, tests, time_limit=2.0):
     """Проверяет решение. tests — список пар (входные_данные, ожидаемый_вывод)."""
+    if not math.isfinite(time_limit) or not 0 < time_limit <= 10:
+        raise ValueError("Invalid time limit.")
+    if not 1 <= len(tests) <= 50:
+        raise ValueError("Expected 1 to 50 tests.")
     total = len(tests)
     blank = "-" * total
 
@@ -147,6 +166,8 @@ def run_submission(code, language, tests, time_limit=2.0):
         return JudgeResult("CE", 0, total, blank, "Решение слишком большое (максимум 64 КБ).")
 
     with tempfile.TemporaryDirectory(prefix="byte-judge-") as workdir:
+        if _sandboxed():
+            os.chmod(workdir, 0o777)  # Only this disposable source directory is mounted.
         cmd, error = _prepare(code, language, workdir)
         if cmd is None:
             return JudgeResult("CE", 0, total, blank, error)
@@ -158,7 +179,7 @@ def run_submission(code, language, tests, time_limit=2.0):
             if time.monotonic() > deadline:
                 marks.append("-")
                 continue
-            status, output, errors = _run_one(cmd, workdir, stdin_text, time_limit)
+            status, output, errors = _run_one(cmd, workdir, stdin_text, min(time_limit, max(.01, deadline-time.monotonic())))
             if status == "T":
                 marks.append("T")
             elif status == "E":
@@ -177,3 +198,19 @@ def run_submission(code, language, tests, time_limit=2.0):
         first_bad = next((m for m in marks if m != "P"), "F")
         verdict = {"F": "WA", "T": "TLE", "E": "RE", "-": "TLE"}[first_bad]
     return JudgeResult(verdict, passed, total, "".join(marks), message)
+
+
+def _prepare_container(code, language, workdir):
+    from .container_runner import run
+    filename = "main.py" if language == "python" else "main.cpp"
+    with open(os.path.join(workdir, filename), "w", encoding="utf-8") as source:
+        source.write(code)
+    command = (["python3", "-I", "-B", "-c", "from pathlib import Path; compile(Path('main.py').read_bytes(), 'main.py', 'exec')"] if language == "python"
+               else ["g++", "-O2", "-std=c++17", "-o", "main", "main.cpp"])
+    try:
+        result = run(command, workdir, timeout=COMPILE_TIMEOUT_SEC, writable=(language == "cpp"))
+    except subprocess.TimeoutExpired:
+        return None, "Компиляция заняла слишком много времени."
+    if result.returncode:
+        return None, _clip(result.stderr.decode("utf-8", errors="replace"))
+    return (["python3", "-I", "-B", "main.py"] if language == "python" else ["./main"]), ""

@@ -5,10 +5,11 @@ from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.hashers import make_password
 from django.conf import settings
 from django.http import Http404, JsonResponse
 from django.db import IntegrityError
-from django.db.models import Q
+from django.db.models import Q, Count, Prefetch
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -99,12 +100,13 @@ def lead_create(request):
 # Кабинет: материалы
 # ---------------------------------------------------------------------------
 
-def _localize_section(section, lang):
+def _localize_section(section, lang, include_content=True):
     """Добавляет display_* поля с fallback на русский."""
     use_kk = lang == "kk"
     section.display_title = (section.title_kk or section.title) if use_kk else section.title
     section.display_summary = (section.summary_kk or section.summary) if use_kk else section.summary
-    section.display_content = (section.content_kk or section.content) if use_kk else section.content
+    if include_content:
+        section.display_content = (section.content_kk or section.content) if use_kk else section.content
     section.display_video_url = (section.video_url_kk or section.video_url) if use_kk else section.video_url
     section.display_video_embed_url = section.make_video_embed_url(section.display_video_url)
     return section
@@ -112,10 +114,10 @@ def _localize_section(section, lang):
 
 def _build_tree(lang="ru"):
     """Все опубликованные разделы одним запросом, собранные в дерево."""
-    sections = list(Section.objects.filter(is_published=True))
+    sections = list(Section.objects.filter(is_published=True).defer("content", "content_kk"))
     by_parent = {}
     for section in sections:
-        _localize_section(section, lang)
+        _localize_section(section, lang, include_content=False)
         by_parent.setdefault(section.parent_id, []).append(section)
     for section in sections:
         section.kids = by_parent.get(section.id, [])
@@ -172,7 +174,7 @@ def _decorate_learning_path(user, roots):
     }
     attempts = list(
         QuizAttempt.objects.filter(user=user, quiz__topic__in=roots)
-        .select_related("quiz", "quiz__topic")
+        .select_related("quiz", "quiz__topic").defer("answers", "quiz__topic__content", "quiz__topic__content_kk")
         .order_by("-created_at")
     )
 
@@ -248,6 +250,9 @@ def dashboard(request, slug=None):
         if next_section is not None and getattr(next_section, "is_locked", False):
             next_section = None
 
+    if current is not None:
+        content = Section.objects.only("content", "content_kk").get(pk=current.pk)
+        current.display_content = (content.content_kk or content.content) if lang == "kk" else content.content
     current_root = _root_topic(current, by_id) if current else None
     current_quiz = learning["quizzes"].get(current_root.id) if current_root else None
     current_best_score = learning["best_by_topic"].get(current_root.id) if current_root else None
@@ -449,7 +454,7 @@ def _current_account(request):
         return None
     return (
         ContestAccount.objects.select_related("contest")
-        .filter(pk=account_id, is_active=True)
+        .filter(pk=account_id, is_active=True).filter(Q(user__isnull=True) | Q(user=request.user))
         .first()
     )
 
@@ -484,7 +489,9 @@ def contest_login(request):
         login = request.POST.get("login", "").strip().lower()
         password = request.POST.get("password", "")
         account = ContestAccount.objects.filter(login=login, is_active=True, contest__kind=kind).first()
-        if account and account.check_password(password):
+        valid = account.check_password(password) if account else bool(make_password(password) and False)
+        if valid and (account.user_id is None or account.user_id == request.user.pk):
+            request.session.cycle_key()
             request.session[CONTEST_SESSION_KEY] = account.pk
             return redirect("contest")
         error = tr("Неверный логин или пароль контеста.", get_request_language(request))
@@ -527,15 +534,28 @@ def contest(request):
 
     items = []
     payload_tasks = []
-    for task in contest_obj.tasks.all():
-        total = task.tests.count()
-        finished = account.submissions.filter(task=task).exclude(verdict="PENDING")
-        best = finished.order_by("-passed", "created_at").first()
-        history = [_submission_json(s) for s in finished.order_by("-created_at")[:8]]
-        best_passed = best.passed if best else 0
+    tasks = list(contest_obj.tasks.annotate(test_count=Count("tests")))
+    # SQL window functions bound history to eight rows per task in one query.
+    from django.db.models import F, Window
+    from django.db.models.functions import RowNumber
+    submissions = account.submissions.exclude(verdict="PENDING").filter(task__in=tasks)
+    best_by_task = {}
+    solved = set()
+    from django.db.models import Max
+    for score in submissions.values("task_id").annotate(best=Max("passed")):
+        best_by_task[score["task_id"]] = score["best"]
+    solved.update(submissions.filter(verdict="OK").values_list("task_id", flat=True).distinct())
+    recent = submissions.annotate(row=Window(expression=RowNumber(), partition_by=[F("task_id")], order_by=[F("created_at").desc(), F("pk").desc()])).filter(row__lte=8).defer("code").order_by("-created_at", "-pk")
+    history_by_task = {}
+    for sub in recent:
+        history_by_task.setdefault(sub.task_id, []).append(_submission_json(sub))
+    for task in tasks:
+        total = task.test_count
+        history = history_by_task.get(task.pk, [])
+        best_passed = best_by_task.get(task.pk, 0)
         if contest_obj.kind == "sql":
             total = 1
-            best_passed = int(finished.filter(verdict="OK").exists())
+            best_passed = int(task.pk in solved)
         lang = get_request_language(request)
         task.display_title = (task.title_kk or task.title) if lang == "kk" else task.title
         task.display_statement = (task.statement_kk or task.statement) if lang == "kk" else task.statement
@@ -613,9 +633,9 @@ def contest_submit(request):
     if not tests:
         return JsonResponse({"error": "У этой задачи пока нет тестов. Сообщите куратору."}, status=409)
 
-    lease = _acquire_sql_slot(account) if is_sql else None
-    if is_sql and lease is None:
-        return JsonResponse({"error": "Предыдущий SQL-запрос ещё выполняется. Подождите несколько секунд."}, status=429)
+    lease = _acquire_sql_slot(account, seconds=120)
+    if lease is None:
+        return JsonResponse({"error": "Предыдущее решение ещё проверяется. Подождите несколько секунд."}, status=429)
 
     submission = Submission.objects.create(
         account=account, task=task, language=language, code=code, total=len(tests),
@@ -671,7 +691,10 @@ def _section_path_titles(section, lang="ru"):
 def _ai_request_payload(request):
     try:
         data = json.loads(request.body)
-        message = (data.get("message") or "").strip()
+        message = data.get("message") or ""
+        if not isinstance(message, str):
+            raise ValueError("message must be a string")
+        message = message.strip()
         raw_history = data.get("history") or []
     except (ValueError, TypeError, AttributeError):
         return None, None, JsonResponse({"error": "Некорректный запрос."}, status=400)
@@ -762,12 +785,21 @@ def ai_reset_home(request):
     return JsonResponse({"ok": True})
 
 
+def _student_can_open_section(user, section):
+    roots, by_id = _build_tree()
+    _decorate_learning_path(user, roots)
+    node = by_id.get(section.pk)
+    return node is not None and not getattr(node, "is_locked", True)
+
+
 @login_required
 @require_POST
 def ai_ask(request, slug):
     section = Section.objects.filter(slug=slug, is_published=True).first()
     if section is None:
         raise Http404("Раздел не найден")
+    if not _student_can_open_section(request.user, section):
+        return JsonResponse({"error": "Сначала завершите предыдущую тему."}, status=403)
     lang = get_request_language(request)
     _localize_section(section, lang)
 
@@ -814,9 +846,9 @@ def ai_reset(request, slug):
 
 # SQL runs share a database-backed per-participant lease with submissions.
 # Unlike a session/cache timestamp, this also serializes requests across workers.
-def _acquire_sql_slot(account):
+def _acquire_sql_slot(account, seconds=35):
     now = timezone.now()
-    lease = now + timedelta(seconds=35)
+    lease = now + timedelta(seconds=seconds)
     claimed = ContestAccount.objects.filter(pk=account.pk).filter(
         Q(sql_busy_until__isnull=True) | Q(sql_busy_until__lte=now)
     ).update(sql_busy_until=lease)

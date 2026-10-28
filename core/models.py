@@ -555,3 +555,10 @@ class TextbookReference(models.Model):
 
     def __str__(self):
         return f"{self.paragraph}. {self.title} — {self.page_start}"
+
+
+class RequestBucket(models.Model):
+    """Shared fixed-window counters; key contains only an HMAC, never raw IP/login."""
+    key = models.CharField(max_length=96, primary_key=True)
+    hits = models.PositiveIntegerField(default=0)
+    expires_at = models.DateTimeField(db_index=True)
