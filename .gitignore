@@ -15,3 +15,9 @@ staticfiles/
 .DS_Store
 .idea/
 .vscode/
+
+# Backups and local release artifacts
+*.sqlite3*
+.env.*
+!.env.example
+!deploy/production.env.example

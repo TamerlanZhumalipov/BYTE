@@ -96,7 +96,7 @@ def ask(section, path_titles, history, message):
     if not api_key:
         raise AIServiceError("Gemini API не настроен: отсутствует GEMINI_API_KEY.", code="NO_KEY")
 
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=settings.AI_HTTP_TIMEOUT_MS, retry_options=types.HttpRetryOptions(attempts=1)))
 
     contents = [
         types.Content(

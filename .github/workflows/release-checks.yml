@@ -1,0 +1,40 @@
+name: Release security checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DJANGO_DEBUG: '1'
+      BYTE_JUDGE_BACKEND: docker
+      AI_ENABLED: '0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.lock.txt
+      - name: Install audited dependencies
+        run: |
+          python -m pip install --upgrade 'pip>=26.2.2'
+          python -m pip install -r requirements.lock.txt pip-audit
+      - name: Dependency advisory check
+        run: pip-audit -r requirements.lock.txt --no-deps --disable-pip
+      - name: Static files, migrations and tests
+        run: |
+          python manage.py collectstatic --noinput
+          python manage.py makemigrations --check --dry-run
+          python manage.py migrate --noinput
+          python manage.py test core.tests
+      - name: Real Linux container acceptance
+        run: |
+          docker build --pull -t byte-judge:local -f deploy/judge.Dockerfile .
+          python manage.py verify_judge
